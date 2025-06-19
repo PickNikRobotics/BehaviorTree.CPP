@@ -5,12 +5,16 @@
 
 #include "behaviortree_cpp/json_export.h"
 #include "behaviortree_cpp/contrib/json.hpp"
-#include "behaviortree_cpp/contrib/pybind11_json.hpp"
 
 namespace BT
 {
 
-bool toPythonObject(const BT::Any& val, pybind11::object& dest)
+#if defined(_WIN32)
+__declspec(dllexport)
+#else
+__attribute__((visibility("default")))
+#endif
+    bool toPythonObject(const BT::Any& val, pybind11::object& dest)
 {
   nlohmann::json json;
   if(JsonExporter::get().toJson(val, json))

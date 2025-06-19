@@ -9,6 +9,8 @@
 #ifndef PYBIND11_JSON_HPP
 #define PYBIND11_JSON_HPP
 
+#include <pybind11/pytypes.h>
+#include <pybind11/numpy.h>
 #include <string>
 #include <vector>
 
@@ -133,6 +135,10 @@ namespace pyjson
                 out[py::str(key).cast<std::string>()] = to_json(obj[key]);
             }
             return out;
+        }
+        if (py::isinstance<py::array>(obj))
+        {
+            return obj.cast<nl::json::array_t>();
         }
         throw std::runtime_error("to_json not implemented for this type of object: " + py::repr(obj).cast<std::string>());
     }

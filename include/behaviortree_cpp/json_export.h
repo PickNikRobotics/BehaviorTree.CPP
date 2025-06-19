@@ -2,9 +2,14 @@
 
 #include "behaviortree_cpp/utils/safe_any.hpp"
 #include "behaviortree_cpp/basic_types.h"
-
 // Use the version nlohmann::json embedded in BT.CPP
 #include "behaviortree_cpp/contrib/json.hpp"
+
+#ifdef BTCPP_PYTHON
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include "behaviortree_cpp/contrib/pybind11_json.hpp"
+#endif
 
 namespace BT
 {
@@ -82,13 +87,6 @@ public:
   template <typename T>
   Expected<T> fromJson(const nlohmann::json& source) const;
 
-  template <typename T>
-  void fromJsonHelper(const nlohmann::json& src, T& dst) const
-  {
-    dst = *fromJson<T>(src);
-  }
-
-
   /**
    * @brief Register new JSON converters with addConverter<Foo>().
    * You should used first the macro BT_JSON_CONVERTER.
@@ -126,7 +124,14 @@ private:
   std::unordered_map<std::type_index, FromJonConverter> from_json_array_converters_;
   std::unordered_map<std::string, BT::TypeInfo> type_names_;
 };
-
+#ifdef BTCPP_PYTHON
+template <>
+inline Expected<pybind11::object>
+JsonExporter::fromJson(const nlohmann::json& source) const
+{
+  return pyjson::from_json(source);
+}
+#endif
 template <typename T>
 inline Expected<T> JsonExporter::fromJson(const nlohmann::json& source) const
 {

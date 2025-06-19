@@ -198,6 +198,8 @@ inline void RegisterNodes(BT::BehaviorTreeFactory& factory)
                                std::bind(&GripperInterface::close, &grip_singleton));
   factory.registerNodeType<ApproachObject>("ApproachObject");
   factory.registerNodeType<SaySomething>("SaySomething");
+  factory.registerNodeType<RandomVector>("RandomVector");
+  factory.registerNodeType<PrintMapOfVectors>("PrintMapOfVectors");
 }
 
 }  // namespace DummyNodes

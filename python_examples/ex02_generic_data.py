@@ -7,7 +7,6 @@ Demonstration of passing generic data between nodes.
 import numpy as np
 from btpy import BehaviorTreeFactory, SyncActionNode, NodeStatus, ports
 
-
 xml_text = """
  <root BTCPP_format="4" >
 
@@ -24,7 +23,7 @@ xml_text = """
 """
 
 
-@ports(inputs=["position", "theta"], outputs=["out"])
+@ports(inputs=["position", "theta"], outputs=["out", "position"])
 class Rotate(SyncActionNode):
     def tick(self):
         # Build a rotation matrix which rotates points by `theta` degrees.
@@ -38,6 +37,7 @@ class Rotate(SyncActionNode):
 
         # Set the output.
         self.set_output("out", rotated)
+        self.set_output("position", position)
 
         return NodeStatus.SUCCESS
 

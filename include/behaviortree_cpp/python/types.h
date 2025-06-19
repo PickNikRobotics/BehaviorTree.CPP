@@ -2,10 +2,8 @@
 
 #include <pybind11/pybind11.h>
 
-#include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/json_export.h"
-#include "behaviortree_cpp/contrib/json.hpp"
-#include "behaviortree_cpp/contrib/pybind11_json.hpp"
+
 #include "behaviortree_cpp/utils/safe_any.hpp"
 
 namespace BT
@@ -20,12 +18,12 @@ namespace BT
 template <typename T>
 bool fromPythonObject(const pybind11::object& obj, T& dest)
 {
-  if constexpr(nlohmann::detail::is_getable<nlohmann::json, T>::value)
+  auto dest_maybe = JsonExporter::get().fromJson<T>(obj);
+  if(dest_maybe.has_value())
   {
-    JsonExporter::get().fromJsonHelper<T>(obj, dest);
+    dest = dest_maybe.value();
     return true;
   }
-
   return false;
 }
 
