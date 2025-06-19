@@ -37,9 +37,9 @@ struct TestNodeConfig
   /// if async_delay > 0, this action become asynchronous and wait this amount of time
   std::chrono::milliseconds async_delay = std::chrono::milliseconds(0);
 
-  /// Function invoked when the action is completed. By default just return [return_status]
-  /// Override it to intorduce more comple cases
-  std::function<NodeStatus(void)> complete_func = [this]() { return return_status; };
+  /// Function invoked when the action is completed.
+  /// If not specified, the node will return [return_status]
+  std::function<NodeStatus(void)> complete_func;
 };
 
 /**
@@ -50,21 +50,28 @@ struct TestNodeConfig
  * 3. Either complete immediately (synchronous action), or after a
  *    given period of time (asynchronous action)
  *
- * This behavior is changed by the parameters pased with TestNodeConfig.
+ * This behavior is changed by the parameters passed with TestNodeConfig.
  *
  * This particular node is created by the factory when TestNodeConfig is
  * added as a substitution rule:
  *
- *    TestNodeConfig test_config;
+ *    auto test_config = std::make_shared<TestNodeConfig>();
  *    // change fields of test_config
  *    factory.addSubstitutionRule(pattern, test_config);
  *
- * See tutorial 11 for more details.
+ * See tutorial 15 for more details.
  */
 class TestNode : public BT::StatefulActionNode
 {
 public:
-  TestNode(const std::string& name, const NodeConfig& config, TestNodeConfig test_config);
+  // This constructor is deprecated, because it may cause problems if TestNodeConfig::complete_func is capturing
+  // a reference to the TestNode, i.e. [this]. Use the constructor with std::shared_ptr<TestNodeConfig> instead.
+  // For more details, see https://github.com/BehaviorTree/BehaviorTree.CPP/pull/967
+  [[deprecated("prefer the constructor with std::shared_ptr<TestNodeConfig>")]] TestNode(
+      const std::string& name, const NodeConfig& config, TestNodeConfig test_config);
+
+  TestNode(const std::string& name, const NodeConfig& config,
+           std::shared_ptr<TestNodeConfig> test_config);
 
   static PortsList providedPorts()
   {
@@ -80,7 +87,7 @@ protected:
 
   NodeStatus onCompleted();
 
-  TestNodeConfig _test_config;
+  std::shared_ptr<TestNodeConfig> _config;
   ScriptFunction _success_executor;
   ScriptFunction _failure_executor;
   ScriptFunction _post_executor;
