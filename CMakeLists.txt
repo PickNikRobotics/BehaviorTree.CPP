@@ -33,6 +33,7 @@ option(BTCPP_EXAMPLES   "Build tutorials and examples" ON)
 option(BTCPP_UNIT_TESTS "Build the unit tests" ON)
 option(BTCPP_GROOT_INTERFACE "Add Groot2 connection. Requires ZeroMQ" ON)
 option(BTCPP_SQLITE_LOGGING "Add SQLite logging." ON)
+option(BTCPP_PYTHON "Add Python bindings" ON)
 
 option(USE_V3_COMPATIBLE_NAMES  "Use some alias to compile more easily old 3.x code" OFF)
 
@@ -142,6 +143,10 @@ if(BTCPP_SQLITE_LOGGING)
     list(APPEND BT_SOURCE  src/loggers/bt_sqlite_logger.cpp )
 endif()
 
+if(BTCPP_PYTHON)
+    list(APPEND BT_SOURCE  src/python/types.cpp)
+endif()
+
 ######################################################
 
 if (UNIX)
@@ -172,6 +177,18 @@ target_link_libraries(${BTCPP_LIBRARY}
     PUBLIC
         ${BTCPP_EXTRA_LIBRARIES}
 )
+
+if(BTCPP_PYTHON)
+    find_package(Python COMPONENTS Interpreter Development)
+    find_package(pybind11 CONFIG)
+
+    pybind11_add_module(btpy_cpp src/python/bindings.cpp)
+    target_compile_options(btpy_cpp PRIVATE -Wno-gnu-zero-variadic-macro-arguments)
+    target_link_libraries(btpy_cpp PRIVATE ${BTCPP_LIBRARY})
+
+    target_link_libraries(${BTCPP_LIBRARY} PUBLIC Python::Python pybind11::pybind11)
+    target_compile_definitions(${BTCPP_LIBRARY} PUBLIC BTCPP_PYTHON)
+endif()
 
 target_include_directories(${BTCPP_LIBRARY}
     PUBLIC
