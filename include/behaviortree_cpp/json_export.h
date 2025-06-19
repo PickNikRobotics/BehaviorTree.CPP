@@ -1,6 +1,5 @@
 #pragma once
 
-#include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/utils/safe_any.hpp"
 #include "behaviortree_cpp/basic_types.h"
 
@@ -45,7 +44,6 @@ namespace BT
 /**
 *  Use RegisterJsonDefinition<Foo>();
 */
-
 class JsonExporter
 {
 public:
@@ -84,11 +82,14 @@ public:
   template <typename T>
   Expected<T> fromJson(const nlohmann::json& source) const;
 
-  /**
-   * @brief Register new JSON converters with addConverter<Foo>().
-   * You should used first the macro BT_JSON_CONVERTER.
-   * The conversions from/to vector<T> are automatically registered.
-   */
+  template <typename T>
+  void fromJsonHelper(const nlohmann::json& src, T& dst) const
+  {
+    dst = *fromJson<T>(src);
+  }
+
+  /// Register new JSON converters with addConverter<Foo>().
+  /// You should have used first the macro BT_JSON_CONVERTER
   template <typename T>
   void addConverter();
 
