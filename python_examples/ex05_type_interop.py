@@ -60,7 +60,7 @@ class Print(SyncActionNode):
 
 
 factory = BehaviorTreeFactory()
-factory.register_from_plugin("sample_nodes/bin/libdummy_nodes_dyn.so")
+factory.register_from_plugin("build/sample_nodes/bin/libdummy_nodes_dyn.so")
 factory.register(PutVector)
 factory.register(Print)
 
