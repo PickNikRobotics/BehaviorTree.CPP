@@ -36,10 +36,12 @@ set(BT_TESTS
 
 if(ament_cmake_FOUND)
 
-    find_package(ament_cmake_gtest REQUIRED)
+    find_package(ament_cmake_gmock REQUIRED)
 
-    ament_add_gtest(behaviortree_cpp_test ${BT_TESTS})
-    target_link_libraries(behaviortree_cpp_test ${ament_LIBRARIES})
+    ament_add_gmock(${BTCPP_LIBRARY}_test ${BT_TESTS})
+    target_link_libraries(${BTCPP_LIBRARY}_test
+        ${TEST_DEPENDECIES}
+        ${ament_LIBRARIES})
 
 else()
 
