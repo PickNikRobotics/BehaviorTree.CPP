@@ -639,7 +639,6 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
   const auto element_name = element->Name();
   const auto element_ID = element->Attribute("ID");
 
-  // TODO: Pull out this node type logic
   auto node_type = convertFromString<NodeType>(element_name);
   // name used by the factory
   std::string type_ID;
@@ -684,8 +683,6 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
 
   PortsRemapping port_remap;
   NonPortAttributes other_attributes;
-  // Only relevant for subtrees
-  bool do_autoremap = false;
 
   // Parse ports and validate them where we can.
   for(const XMLAttribute* att = element->FirstAttribute(); att; att = att->Next())
@@ -733,13 +730,19 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
 
       port_remap[port_name] = port_value;
     }
-    else if(node_type == NodeType::SUBTREE && port_name == "_autoremap")
-    {
-      do_autoremap = convertFromString<bool>(port_value);
-    }
     else if(!IsReservedAttribute(port_name))
     {
       other_attributes[port_name] = port_value;
+    }
+  }
+
+  bool do_autoremap = false;
+  if(node_type == NodeType::SUBTREE)
+  {
+    const XMLAttribute* auto_remap_ptr = element->FindAttribute("_autoremap");
+    if(auto_remap_ptr != nullptr)
+    {
+      do_autoremap = convertFromString<bool>(auto_remap_ptr->Value());
     }
   }
 
@@ -778,7 +781,6 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
   //---------------------------------------------
   TreeNode::Ptr new_node;
 
-  // TODO: in order to set the config at this point, we need the subtree model, which is parsed after this function call in recursivelyCreateSubtree
   if(node_type == NodeType::SUBTREE)
   {
     // check if this subtree has a model. If it does,
@@ -812,7 +814,7 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
     // populate the node config
     for(const auto& [port_name, port_value] : port_remap)
     {
-      PortDirection direction = PortDirection::INPUT;
+      auto direction = PortDirection::INPUT;
       if(subtree_model_it != subtree_models.end())
       {
         const PortsList& subtree_model_ports = subtree_model_it->second.ports;
@@ -1013,7 +1015,7 @@ void BT::XMLParser::PImpl::recursivelyCreateSubtree(const std::string& tree_ID,
 
       // Populate the subtree's blackboard with it's port values.
       PortsRemapping subtree_remapping = const_node->config().input_ports;
-      const PortsRemapping output_ports = const_node->config().output_ports;
+      const PortsRemapping& output_ports = const_node->config().output_ports;
       subtree_remapping.insert(output_ports.begin(), output_ports.end());
       for(const auto& [port_name, port_value] : subtree_remapping)
       {
