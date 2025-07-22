@@ -40,6 +40,22 @@ bool JsonExporter::toJson(const Any& any, nlohmann::json& dst) const
     dst[kTypeField] = "double";
     dst[kValueField] = any.cast<double>();
   }
+  else if(type == typeid(std::vector<double>))
+  {
+    dst = any.cast<std::vector<double>>();
+  }
+  else if(type == typeid(std::vector<int>))
+  {
+    dst = any.cast<std::vector<int>>();
+  }
+  else if(type == typeid(std::vector<std::string>))
+  {
+    dst = any.cast<std::vector<std::string>>();
+  }
+  else if(type == typeid(std::vector<bool>))
+  {
+    dst = any.cast<std::vector<bool>>();
+  }
   else
   {
     auto it = to_json_converters_.find(type);
@@ -61,7 +77,7 @@ JsonExporter::ExpectedEntry JsonExporter::fromJson(const nlohmann::json& source)
 {
   if(source.is_null())
   {
-    return nonstd::make_unexpected("json object is null");
+    return Entry{ BT::Any(), BT::TypeInfo::Create<std::nullptr_t>() };
   }
   if(!source.contains(kTypeField))
   {
@@ -102,8 +118,8 @@ JsonExporter::ExpectedEntry JsonExporter::fromJson(const nlohmann::json& source)
   {
     return nonstd::make_unexpected("Type not found in registered list");
   }
-  auto func_it = from_json_converters_.find(type_it->second.type());
-  if(func_it == from_json_converters_.end())
+  auto func_it = from_converters.find(type_it->second.type());
+  if(func_it == from_converters.end())
   {
     return nonstd::make_unexpected("Type not found in registered list");
   }
