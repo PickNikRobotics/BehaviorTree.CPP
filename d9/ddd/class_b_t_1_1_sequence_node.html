@@ -92,6 +92,7 @@ $(document).ready(function(){initNavTree('d9/ddd/class_b_t_1_1_sequence_node.htm
 <div class="header">
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
+<a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="../../d4/de8/class_b_t_1_1_sequence_node-members.html">List of all members</a>  </div>
   <div class="headertitle"><div class="title">BT::SequenceNode Class Reference</div></div>
 </div><!--header-->
@@ -250,6 +251,16 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>emitWakeUpSignal</b> 
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>requiresWakeUp</b> () const</td></tr>
 <tr class="separator:ab5341443a75942aee3de15fe41ede029 inherit pub_methods_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pro-attribs" name="pro-attribs"></a>
+Protected Attributes</h2></td></tr>
+<tr class="memitem:ae3570f9ceb07440d616c3049fa06e9c6"><td class="memItemLeft" align="right" valign="top"><a id="ae3570f9ceb07440d616c3049fa06e9c6" name="ae3570f9ceb07440d616c3049fa06e9c6"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>current_child_idx_</b></td></tr>
+<tr class="separator:ae3570f9ceb07440d616c3049fa06e9c6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="inherit_header pro_attribs_class_b_t_1_1_control_node"><td colspan="2" onclick="javascript:toggleInherit('pro_attribs_class_b_t_1_1_control_node')"><img src="../../closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">BT::ControlNode</a></td></tr>
+<tr class="memitem:afc918c0cad55247d3f07dc1305804f9c inherit pro_attribs_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="afc918c0cad55247d3f07dc1305804f9c" name="afc918c0cad55247d3f07dc1305804f9c"></a>
+std::vector&lt; <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>children_nodes_</b></td></tr>
+<tr class="separator:afc918c0cad55247d3f07dc1305804f9c inherit pro_attribs_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_types_class_b_t_1_1_tree_node"><td colspan="2" onclick="javascript:toggleInherit('pub_types_class_b_t_1_1_tree_node')"><img src="../../closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">BT::TreeNode</a></td></tr>
@@ -329,10 +340,6 @@ PostScripts &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>postCond
 template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ac2ecedb8437809238a9662de376e6079 inherit pro_methods_class_b_t_1_1_tree_node"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><b>parseString</b> (const std::string &amp;str) const</td></tr>
 <tr class="separator:ac2ecedb8437809238a9662de376e6079 inherit pro_methods_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pro_attribs_class_b_t_1_1_control_node"><td colspan="2" onclick="javascript:toggleInherit('pro_attribs_class_b_t_1_1_control_node')"><img src="../../closed.png" alt="-"/>&#160;Protected Attributes inherited from <a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">BT::ControlNode</a></td></tr>
-<tr class="memitem:afc918c0cad55247d3f07dc1305804f9c inherit pro_attribs_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="afc918c0cad55247d3f07dc1305804f9c" name="afc918c0cad55247d3f07dc1305804f9c"></a>
-std::vector&lt; <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> * &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>children_nodes_</b></td></tr>
-<tr class="separator:afc918c0cad55247d3f07dc1305804f9c inherit pro_attribs_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The <a class="el" href="../../d9/ddd/class_b_t_1_1_sequence_node.html" title="The SequenceNode is used to tick children in an ordered sequence. If any child returns RUNNING,...">SequenceNode</a> is used to tick children in an ordered sequence. If any child returns RUNNING, previous children will NOT be ticked again. </p>
