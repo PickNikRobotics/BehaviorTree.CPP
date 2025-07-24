@@ -118,7 +118,6 @@ private:
 
   std::unordered_map<std::type_index, ToJonConverter> to_json_converters_;
   std::unordered_map<std::type_index, FromJonConverter> from_json_converters_;
-  std::unordered_map<std::type_index, FromJonConverter> from_json_array_converters_;
   std::unordered_map<std::string, BT::TypeInfo> type_names_;
 };
 
@@ -143,15 +142,6 @@ inline Expected<T> JsonExporter::fromJson(const nlohmann::json& source) const
 template <typename T>
 inline void JsonExporter::addConverter()
 {
-  // we need to get the name of the type
-  nlohmann::json const js = T{};
-  // we insert both the name obtained from JSON and demangle
-  if(js.contains("__type"))
-  {
-    type_names_.insert({ std::string(js["__type"]), BT::TypeInfo::Create<T>() });
-  }
-  type_names_.insert({ BT::demangle(typeid(T)), BT::TypeInfo::Create<T>() });
-
   ToJonConverter to_converter = [](const BT::Any& entry, nlohmann::json& dst) {
     dst = *const_cast<BT::Any&>(entry).castPtr<T>();
   };
@@ -162,23 +152,16 @@ inline void JsonExporter::addConverter()
     return { BT::Any(value), BT::TypeInfo::Create<T>() };
   };
 
+  // we need to get the name of the type
+  nlohmann::json const js = T{};
+  // we insert both the name obtained from JSON and demangle
+  if(js.contains("__type"))
+  {
+    type_names_.insert({ std::string(js["__type"]), BT::TypeInfo::Create<T>() });
+  }
+  type_names_.insert({ BT::demangle(typeid(T)), BT::TypeInfo::Create<T>() });
+
   from_json_converters_.insert({ typeid(T), from_converter });
-
-  //---- include vectors of T
-  ToJonConverter to_array_converter = [](const BT::Any& entry, nlohmann::json& dst) {
-    dst = *const_cast<BT::Any&>(entry).castPtr<std::vector<T>>();
-  };
-  to_json_converters_.insert({ typeid(std::vector<T>), to_array_converter });
-
-  FromJonConverter from_array_converter = [](const nlohmann::json& src) -> Entry {
-    std::vector<T> value;
-    for(const auto& item : src)
-    {
-      value.push_back(item.get<T>());
-    }
-    return { BT::Any(value), BT::TypeInfo::Create<std::vector<T>>() };
-  };
-  from_json_array_converters_.insert({ typeid(T), from_array_converter });
 }
 
 template <typename T>
@@ -193,18 +176,6 @@ inline void JsonExporter::addConverter(
     }
   };
   to_json_converters_.insert({ typeid(T), std::move(converter) });
-  //---------------------------------------------
-  // add the vector<T> converter
-  auto vector_converter = [converter](const BT::Any& entry, nlohmann::json& json) {
-    auto& vec = *const_cast<BT::Any&>(entry).castPtr<std::vector<T>>();
-    for(const auto& item : vec)
-    {
-      nlohmann::json item_json;
-      converter(BT::Any(item), item_json);
-      json.push_back(item_json);
-    }
-  };
-  to_json_converters_.insert({ typeid(std::vector<T>), std::move(vector_converter) });
 }
 
 template <typename T>
@@ -218,19 +189,6 @@ JsonExporter::addConverter(std::function<void(const nlohmann::json&, T&)> func)
   };
   type_names_.insert({ BT::demangle(typeid(T)), BT::TypeInfo::Create<T>() });
   from_json_converters_.insert({ typeid(T), std::move(converter) });
-  //---------------------------------------------
-  // add the vector<T> converter
-  auto vector_converter = [func](const nlohmann::json& json) -> Entry {
-    std::vector<T> tmp;
-    for(const auto& item : json)
-    {
-      T item_tmp;
-      func(item, item_tmp);
-      tmp.push_back(item_tmp);
-    }
-    return { BT::Any(tmp), BT::TypeInfo::Create<std::vector<T>>() };
-  };
-  from_json_array_converters_.insert({ typeid(T), std::move(vector_converter) });
 }
 
 template <typename T>
