@@ -40,7 +40,18 @@ struct is_vector<std::vector<T, A>> : std::true_type
 // Helper function to check if a demangled type string is a std::vector<..>
 inline bool isVector(const std::string& type_name)
 {
-  return std::regex_match(type_name, std::regex(R"(^std::vector<.*>$)"));
+  // Strip leading MSVC qualifiers "class " or "struct ".
+  std::string name = type_name;
+  constexpr auto strip_prefix = [](std::string& s, const char* prefix) {
+    size_t len = std::strlen(prefix);
+    if(s.rfind(prefix, 0) == 0)
+      s.erase(0, len);
+  };
+  strip_prefix(name, "class ");
+  strip_prefix(name, "struct ");
+
+  // Use regex to check if the name matches 'std::vector<...>'.
+  return std::regex_match(name, std::regex(R"(^std::vector<.*>$)"));
 }
 
 /**

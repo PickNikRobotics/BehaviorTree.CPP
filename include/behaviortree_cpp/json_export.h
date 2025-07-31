@@ -11,7 +11,7 @@ namespace BT
 {
 
 /**
-*  To add new type to the JSON library, you should follow these isntructions:
+*  To add new type to the JSON library, you should follow these instructions:
 *    https://json.nlohmann.me/features/arbitrary_types/
 *
 *  Considering for instance the type:
@@ -51,6 +51,10 @@ class JsonExporter
 public:
   static JsonExporter& get();
 
+  // Delete copy constructors as can only be this one global instance.
+  JsonExporter& operator=(JsonExporter&&) = delete;
+  JsonExporter& operator=(JsonExporter&) = delete;
+
   /**
    * @brief toJson adds the content of "any" to the JSON "destination".
    *
@@ -80,22 +84,31 @@ public:
   template <typename T>
   Expected<T> fromJson(const nlohmann::json& source) const;
 
-  /// Register new JSON converters with addConverter<Foo>().
-  /// You should have used first the macro BT_JSON_CONVERTER
+  /**
+   * @brief Register new JSON converters with addConverter<Foo>().
+   * You should used first the macro BT_JSON_CONVERTER.
+   * The conversions from/to vector<T> are automatically registered.
+   */
   template <typename T>
   void addConverter();
 
   /**
    * @brief addConverter register a to_json function that converts a json to a type T.
+   * The conversion to std:vector<T> is automatically registered.
    *
    * @param to_json the function with signature void(const T&, nlohmann::json&)
-   * @param add_type if true, add a field called [__type] with the name ofthe type.
-   * */
+   * @param add_type if true, add a field called [__type] with the name of the type.
+   */
   template <typename T>
   void addConverter(std::function<void(const T&, nlohmann::json&)> to_json,
                     bool add_type = true);
 
-  /// Register custom from_json converter directly.
+  /**
+   * @brief addConverter register a from_json function that converts a json to a type T.
+   * The conversions from std::vector<T> is automatically registered.
+   *
+   * @param from_json the function with signature void(const nlohmann::json&, T&)
+   */
   template <typename T>
   void addConverter(std::function<void(const nlohmann::json&, T&)> from_json);
 

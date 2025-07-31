@@ -150,7 +150,7 @@ TEST(PortsTest, NonPorts)
   ASSERT_EQ(root->type(), NodeType::ACTION);
 
   EXPECT_EQ(root->config().other_attributes.size(), 1);
-  ASSERT_TRUE(root->config().other_attributes.contains("_not_da_port"));
+  ASSERT_EQ(root->config().other_attributes.count("_not_da_port"), 1);
   EXPECT_EQ(root->config().other_attributes.at("_not_da_port"), "whateva");
 }
 
@@ -455,7 +455,7 @@ public:
 
   NodeStatus tick() override
   {
-    // case 1: the port is Any, but we can cast dirrectly to string
+    // case 1: the port is Any, but we can cast directly to string
     auto res_str = getInput<std::string>("val_str");
     // case 2: the port is Any, and we retrieve an Any (to be casted later)
     auto res_int = getInput<BT::Any>("val_int");
@@ -855,7 +855,7 @@ TEST(PortTest, VectorAny)
   ASSERT_NO_THROW(status = tree.tickOnce());
   ASSERT_EQ(status, NodeStatus::SUCCESS);
 
-  // Test that setting a port as a vector<string> and attempting to retrie it as a vector<double> fails.
+  // Test that setting a port as a vector<string> and attempting to retrieve it as a vector<double> fails.
   ASSERT_NO_THROW(tree = factory.createTreeFromText(xml_txt_bad));
 
   ASSERT_NO_THROW(status = tree.tickOnce());
