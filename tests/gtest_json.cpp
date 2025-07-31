@@ -147,7 +147,7 @@ TEST_F(JsonTest, TwoWaysConversion)
   ASSERT_EQ(string_val, "string_val");
   auto int_val = exporter.fromJson(json["int"])->first.cast<int>();
   ASSERT_EQ(int_val, 69);
-  auto uint_val = exporter.fromJson(json["uint"])->first.cast<uint>();
+  auto uint_val = exporter.fromJson(json["uint"])->first.cast<uint64_t>();
   ASSERT_EQ(uint_val, 96);
   auto real = exporter.fromJson(json["real"])->first.cast<double>();
   ASSERT_EQ(real, 3.14);

@@ -855,7 +855,7 @@ TEST(PortTest, VectorAny)
   ASSERT_NO_THROW(status = tree.tickOnce());
   ASSERT_EQ(status, NodeStatus::SUCCESS);
 
-  // Test that setting a port as a vector<string> and attempting to retrie it as a vector<double> fails.
+  // Test that setting a port as a vector<string> and attempting to retrieve it as a vector<double> fails.
   ASSERT_NO_THROW(tree = factory.createTreeFromText(xml_txt_bad));
 
   ASSERT_NO_THROW(status = tree.tickOnce());

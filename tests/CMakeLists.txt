@@ -36,9 +36,9 @@ set(BT_TESTS
 
 if(ament_cmake_FOUND)
 
-    find_package(ament_cmake_gmock REQUIRED)
+    find_package(ament_cmake_gtest REQUIRED)
 
-    ament_add_gmock(${BTCPP_LIBRARY}_test ${BT_TESTS})
+    ament_add_gtest(${BTCPP_LIBRARY}_test ${BT_TESTS})
     target_link_libraries(${BTCPP_LIBRARY}_test
         ${TEST_DEPENDECIES}
         ${ament_LIBRARIES})
