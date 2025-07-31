@@ -10,6 +10,8 @@ var searchData=
   ['integer_7',['integer',['../d4/da9/struct_b_t_1_1_grammar_1_1_integer_1_1integer.html',1,'BT::Grammar::Integer']]],
   ['invalid_5fsuffix_8',['invalid_suffix',['../da/d21/struct_b_t_1_1_grammar_1_1_integer_1_1invalid__suffix.html',1,'BT::Grammar::Integer::invalid_suffix'],['../db/db9/struct_b_t_1_1_grammar_1_1_real_1_1invalid__suffix.html',1,'BT::Grammar::Real::invalid_suffix']]],
   ['inverternode_9',['InverterNode',['../d2/ded/class_b_t_1_1_inverter_node.html',1,'BT']]],
-  ['isblackboardpointer_10',['isBlackboardPointer',['../da/d61/class_b_t_1_1_tree_node.html#ab157589bcee1d9f8d6ae9fc6c8a0b41b',1,'BT::TreeNode']]],
-  ['isloaded_11',['isLoaded',['../d2/ddd/class_b_t_1_1_shared_library.html#a79ab0e4030576779db5edea6cf12e763',1,'BT::SharedLibrary']]]
+  ['is_5fvector_10',['is_vector',['../dd/da1/struct_b_t_1_1is__vector.html',1,'BT']]],
+  ['is_5fvector_3c_20std_3a_3avector_3c_20t_2c_20a_20_3e_20_3e_11',['is_vector&lt; std::vector&lt; T, A &gt; &gt;',['../d0/d5f/struct_b_t_1_1is__vector_3_01std_1_1vector_3_01_t_00_01_a_01_4_01_4.html',1,'BT']]],
+  ['isblackboardpointer_12',['isBlackboardPointer',['../da/d61/class_b_t_1_1_tree_node.html#ab157589bcee1d9f8d6ae9fc6c8a0b41b',1,'BT::TreeNode']]],
+  ['isloaded_13',['isLoaded',['../d2/ddd/class_b_t_1_1_shared_library.html#a79ab0e4030576779db5edea6cf12e763',1,'BT::SharedLibrary']]]
 ];

@@ -59,6 +59,8 @@ var annotated_dup =
       [ "has_static_method_providedPorts< T, typename std::enable_if< std::is_same< decltype(T::providedPorts()), PortsList >::value >::type >", "d6/d07/struct_b_t_1_1has__static__method__provided_ports_3_01_t_00_01typename_01std_1_1enable__if_3_01s8432b5486894de4ea455ef2f702667bd.html", null ],
       [ "IfThenElseNode", "d8/d08/class_b_t_1_1_if_then_else_node.html", "d8/d08/class_b_t_1_1_if_then_else_node" ],
       [ "InverterNode", "d2/ded/class_b_t_1_1_inverter_node.html", null ],
+      [ "is_vector", "dd/da1/struct_b_t_1_1is__vector.html", null ],
+      [ "is_vector< std::vector< T, A > >", "d0/d5f/struct_b_t_1_1is__vector_3_01std_1_1vector_3_01_t_00_01_a_01_4_01_4.html", null ],
       [ "JsonExporter", "d0/d64/class_b_t_1_1_json_exporter.html", "d0/d64/class_b_t_1_1_json_exporter" ],
       [ "KeepRunningUntilFailureNode", "de/d22/class_b_t_1_1_keep_running_until_failure_node.html", null ],
       [ "LeafNode", "d1/de2/class_b_t_1_1_leaf_node.html", null ],

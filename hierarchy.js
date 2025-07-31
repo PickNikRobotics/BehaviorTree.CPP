@@ -31,7 +31,8 @@ var hierarchy =
     [ "BT::Grammar::BooleanLiteral::False", "d9/d0c/struct_b_t_1_1_grammar_1_1_boolean_literal_1_1_false.html", null ],
     [ "std::false_type", null, [
       [ "BT::has_static_method_metadata< T, typename >", "d1/da6/struct_b_t_1_1has__static__method__metadata.html", null ],
-      [ "BT::has_static_method_providedPorts< T, typename >", "d0/d56/struct_b_t_1_1has__static__method__provided_ports.html", null ]
+      [ "BT::has_static_method_providedPorts< T, typename >", "d0/d56/struct_b_t_1_1has__static__method__provided_ports.html", null ],
+      [ "BT::is_vector< T >", "dd/da1/struct_b_t_1_1is__vector.html", null ]
     ] ],
     [ "BT::Monitor::Hook", "dc/d6e/struct_b_t_1_1_monitor_1_1_hook.html", null ],
     [ "lexy::dsl::infix_op_left", null, [
@@ -161,7 +162,8 @@ var hierarchy =
     [ "BT::Grammar::BooleanLiteral::True", "df/daf/struct_b_t_1_1_grammar_1_1_boolean_literal_1_1_true.html", null ],
     [ "std::true_type", null, [
       [ "BT::has_static_method_metadata< T, typename std::enable_if< std::is_same< decltype(T::metadata()), KeyValueVector >::value >::type >", "dc/d0f/struct_b_t_1_1has__static__method__metadata_3_01_t_00_01typename_01std_1_1enable__if_3_01std_1_1065d166f8cc1b3c83dbdb1c2230484f1.html", null ],
-      [ "BT::has_static_method_providedPorts< T, typename std::enable_if< std::is_same< decltype(T::providedPorts()), PortsList >::value >::type >", "d6/d07/struct_b_t_1_1has__static__method__provided_ports_3_01_t_00_01typename_01std_1_1enable__if_3_01s8432b5486894de4ea455ef2f702667bd.html", null ]
+      [ "BT::has_static_method_providedPorts< T, typename std::enable_if< std::is_same< decltype(T::providedPorts()), PortsList >::value >::type >", "d6/d07/struct_b_t_1_1has__static__method__provided_ports_3_01_t_00_01typename_01std_1_1enable__if_3_01s8432b5486894de4ea455ef2f702667bd.html", null ],
+      [ "BT::is_vector< std::vector< T, A > >", "d0/d5f/struct_b_t_1_1is__vector_3_01std_1_1vector_3_01_t_00_01_a_01_4_01_4.html", null ]
     ] ],
     [ "BT::TypeInfo", "d0/d34/class_b_t_1_1_type_info.html", [
       [ "BT::PortInfo", "d8/d5e/class_b_t_1_1_port_info.html", null ]
