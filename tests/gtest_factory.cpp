@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <filesystem>
 #include <string>
 #include <utility>
@@ -83,7 +84,7 @@ static const char* xml_text_subtree_part1 = R"(
   <BehaviorTree ID="MainTree">
     <Fallback name="root_selector">
       <SubTree ID="DoorClosedSubtree" />
-      <Action ID="PassThroughWindow" />
+      <Action ID="PassThroughDoor" />
     </Fallback>
   </BehaviorTree>
 </root>  )";
@@ -94,11 +95,10 @@ static const char* xml_text_subtree_part2 = R"(
   <BehaviorTree ID="DoorClosedSubtree">
     <Sequence name="door_sequence">
       <Decorator ID="Inverter">
-        <Action ID="IsDoorLocked" />
+        <Action ID="IsDoorClosed" />
       </Decorator>
       <Action ID="OpenDoor" />
       <Action ID="PassThroughDoor" />
-      <Action ID="CloseDoor" />
     </Sequence>
   </BehaviorTree>
 </root>  )";
@@ -259,7 +259,7 @@ TEST(BehaviorTreeFactory, SubtreeParsingError)
   catch(const BT::RuntimeError& e)
   {
     std::string error_msg = e.what();
-    EXPECT_TRUE(error_msg.find("line 36") != std::string::npos);
+    EXPECT_THAT(error_msg, ::testing::HasSubstr("line 11"));
   }
   try
   {
@@ -269,7 +269,7 @@ TEST(BehaviorTreeFactory, SubtreeParsingError)
   catch(const BT::RuntimeError& e)
   {
     std::string error_msg = e.what();
-    EXPECT_TRUE(error_msg.find("line 7") != std::string::npos);
+    EXPECT_THAT(error_msg, ::testing::HasSubstr("line 5"));
   }
 }
 
