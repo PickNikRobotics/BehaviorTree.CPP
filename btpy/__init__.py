@@ -43,18 +43,28 @@ class AsyncActionNode(StatefulActionNode):
     """
 
     def __init__(self, name, config):
+        """
+        Initialize the AsyncActionNode with the given name and configuration.
+        """
         super().__init__(name, config)
 
     def on_start(self) -> NodeStatus:
+        """
+        Initialize the coroutine and return RUNNING status.
+        """
         self.coroutine = self.run()
         return NodeStatus.RUNNING
 
     def on_running(self) -> NodeStatus:
+        """
+        Resume the coroutine (generator). As long as the generator is not
+        exhausted, keep this action in the RUNNING state.
+        """
         # The library logic should never allow this to happen, but users can
         # still manually call `on_running` without an associated `on_start`
         # call. Make sure to print a useful error when this happens.
         if self.coroutine is None:
-            raise "AsyncActionNode run without starting"
+            raise ValueError("AsyncActionNode run without starting")
 
         # Resume the coroutine (generator). As long as the generator is not
         # exhausted, keep this action in the RUNNING state.
@@ -70,6 +80,9 @@ class AsyncActionNode(StatefulActionNode):
                 return NodeStatus.SUCCESS
 
     def on_halted(self):
+        """
+        What to do when the action is halted. Does nothing by default.
+        """
         # Default action: do nothing
         pass
 

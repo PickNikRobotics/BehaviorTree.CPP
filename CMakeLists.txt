@@ -191,8 +191,9 @@ target_link_libraries(${BTCPP_LIBRARY}
 )
 
 if(BTCPP_PYTHON)
-    find_package(Python COMPONENTS Interpreter Development)
+    set(PYBIND11_FINDPYTHON ON)
     find_package(pybind11 CONFIG)
+
     message("PYTHON_EXECUTABLE: ${Python_EXECUTABLE}")
 
     pybind11_add_module(btpy_cpp src/python/bindings.cpp)
