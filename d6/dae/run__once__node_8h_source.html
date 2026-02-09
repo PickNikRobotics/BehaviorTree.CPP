@@ -17,6 +17,8 @@
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="../../doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -93,7 +95,7 @@ $(document).ready(function(){initNavTree('d6/dae/run__once__node_8h_source.html'
   <div class="headertitle"><div class="title">run_once_node.h</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*  Copyright (C) 2023 Davide Faconti -  All Rights Reserved</span></div>
+<div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*  Copyright (C) 2023-2025 Davide Faconti -  All Rights Reserved</span></div>
 <div class="line"><span class="lineno">    2</span><span class="comment">*   Copyright (C) 2022 Gaël Écorchard, Czech Institute of Informatics, Robotics, and Cybernetics (ciirc) &lt;gael.ecorchard@cvut.cz&gt;</span></div>
 <div class="line"><span class="lineno">    3</span><span class="comment">*</span></div>
 <div class="line"><span class="lineno">    4</span><span class="comment">*   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;),</span></div>
@@ -176,14 +178,14 @@ $(document).ready(function(){initNavTree('d6/dae/run__once__node_8h_source.html'
 <div class="line"><a id="l00081" name="l00081"></a><span class="lineno">   81</span>}</div>
 <div class="line"><a id="l00082" name="l00082"></a><span class="lineno">   82</span> </div>
 <div class="line"><a id="l00083" name="l00083"></a><span class="lineno">   83</span>}  <span class="comment">// namespace BT</span></div>
-<div class="ttc" id="aclass_b_t_1_1_decorator_node_html"><div class="ttname"><a href="../../d1/de7/class_b_t_1_1_decorator_node.html">BT::DecoratorNode</a></div><div class="ttdef"><b>Definition:</b> decorator_node.h:9</div></div>
+<div class="ttc" id="aclass_b_t_1_1_decorator_node_html"><div class="ttname"><a href="../../d1/de7/class_b_t_1_1_decorator_node.html">BT::DecoratorNode</a></div><div class="ttdoc">The DecoratorNode is the base class for nodes that have exactly one child.</div><div class="ttdef"><b>Definition:</b> decorator_node.h:19</div></div>
 <div class="ttc" id="aclass_b_t_1_1_decorator_node_html_a4b971192d88c85964907bd4b47dbf882"><div class="ttname"><a href="../../d1/de7/class_b_t_1_1_decorator_node.html#a4b971192d88c85964907bd4b47dbf882">BT::DecoratorNode::resetChild</a></div><div class="ttdeci">void resetChild()</div></div>
 <div class="ttc" id="aclass_b_t_1_1_run_once_node_html"><div class="ttname"><a href="../../dd/dbd/class_b_t_1_1_run_once_node.html">BT::RunOnceNode</a></div><div class="ttdoc">The RunOnceNode is used when you want to execute the child only once. If the child is asynchronous,...</div><div class="ttdef"><b>Definition:</b> run_once_node.h:33</div></div>
 <div class="ttc" id="aclass_b_t_1_1_tree_node_html_a07d0876cfd608b690650e930d1a629cc"><div class="ttname"><a href="../../da/d61/class_b_t_1_1_tree_node.html#a07d0876cfd608b690650e930d1a629cc">BT::TreeNode::executeTick</a></div><div class="ttdeci">virtual BT::NodeStatus executeTick()</div><div class="ttdoc">The method that should be used to invoke tick() and setStatus();.</div></div>
 <div class="ttc" id="aclass_b_t_1_1_tree_node_html_ab98b671336cdc496028b52112e21a0ed"><div class="ttname"><a href="../../da/d61/class_b_t_1_1_tree_node.html#ab98b671336cdc496028b52112e21a0ed">BT::TreeNode::setStatus</a></div><div class="ttdeci">void setStatus(NodeStatus new_status)</div><div class="ttdoc">setStatus changes the status of the node. it will throw if you try to change the status to IDLE,...</div></div>
-<div class="ttc" id="anamespace_b_t_html"><div class="ttname"><a href="../../d2/d8d/namespace_b_t.html">BT</a></div><div class="ttdef"><b>Definition:</b> action_node.h:25</div></div>
+<div class="ttc" id="anamespace_b_t_html"><div class="ttname"><a href="../../d2/d8d/namespace_b_t.html">BT</a></div><div class="ttdef"><b>Definition:</b> action_node.h:24</div></div>
 <div class="ttc" id="anamespace_b_t_html_a1414a8362678cd4081eeb30b72845b4e"><div class="ttname"><a href="../../d2/d8d/namespace_b_t.html#a1414a8362678cd4081eeb30b72845b4e">BT::NodeStatus</a></div><div class="ttdeci">NodeStatus</div><div class="ttdef"><b>Definition:</b> basic_types.h:34</div></div>
-<div class="ttc" id="astruct_b_t_1_1_node_config_html"><div class="ttname"><a href="../../dc/d26/struct_b_t_1_1_node_config.html">BT::NodeConfig</a></div><div class="ttdef"><b>Definition:</b> tree_node.h:82</div></div>
+<div class="ttc" id="astruct_b_t_1_1_node_config_html"><div class="ttname"><a href="../../dc/d26/struct_b_t_1_1_node_config.html">BT::NodeConfig</a></div><div class="ttdef"><b>Definition:</b> tree_node.h:105</div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->

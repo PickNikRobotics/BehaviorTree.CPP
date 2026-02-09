@@ -15,22 +15,13 @@ var annotated_dup =
       [ "details", "df/da8/namespace_b_t_1_1details.html", [
         [ "Semaphore", "d9/d24/class_b_t_1_1details_1_1_semaphore.html", null ]
       ] ],
-      [ "Grammar", null, [
-        [ "_xid_start_character", "df/d2d/struct_b_t_1_1_grammar_1_1__xid__start__character.html", null ],
-        [ "AnyValue", "d7/d62/struct_b_t_1_1_grammar_1_1_any_value.html", null ],
-        [ "BooleanLiteral", "d8/d7c/struct_b_t_1_1_grammar_1_1_boolean_literal.html", "d8/d7c/struct_b_t_1_1_grammar_1_1_boolean_literal" ],
-        [ "Expression", "d7/d86/struct_b_t_1_1_grammar_1_1_expression.html", "d7/d86/struct_b_t_1_1_grammar_1_1_expression" ],
-        [ "Integer", "dc/d75/struct_b_t_1_1_grammar_1_1_integer.html", "dc/d75/struct_b_t_1_1_grammar_1_1_integer" ],
-        [ "Name", "d7/d91/struct_b_t_1_1_grammar_1_1_name.html", null ],
-        [ "nested_expr", "df/d99/struct_b_t_1_1_grammar_1_1nested__expr.html", null ],
-        [ "Real", "dc/d13/struct_b_t_1_1_grammar_1_1_real.html", "dc/d13/struct_b_t_1_1_grammar_1_1_real" ],
-        [ "stmt", "d6/db1/struct_b_t_1_1_grammar_1_1stmt.html", null ],
-        [ "StringLiteral", "df/d4b/struct_b_t_1_1_grammar_1_1_string_literal.html", null ]
-      ] ],
       [ "Monitor", null, [
         [ "Hook", "dc/d6e/struct_b_t_1_1_monitor_1_1_hook.html", null ],
         [ "ReplyHeader", "dc/d73/struct_b_t_1_1_monitor_1_1_reply_header.html", null ],
         [ "RequestHeader", "dc/d05/struct_b_t_1_1_monitor_1_1_request_header.html", null ]
+      ] ],
+      [ "Scripting", null, [
+        [ "Token", "da/dd6/struct_b_t_1_1_scripting_1_1_token.html", null ]
       ] ],
       [ "ActionNodeBase", "d3/de2/class_b_t_1_1_action_node_base.html", null ],
       [ "AlwaysFailureNode", "d0/d9c/class_b_t_1_1_always_failure_node.html", null ],
@@ -59,8 +50,8 @@ var annotated_dup =
       [ "has_static_method_providedPorts< T, typename std::enable_if< std::is_same< decltype(T::providedPorts()), PortsList >::value >::type >", "d6/d07/struct_b_t_1_1has__static__method__provided_ports_3_01_t_00_01typename_01std_1_1enable__if_3_01s8432b5486894de4ea455ef2f702667bd.html", null ],
       [ "IfThenElseNode", "d8/d08/class_b_t_1_1_if_then_else_node.html", "d8/d08/class_b_t_1_1_if_then_else_node" ],
       [ "InverterNode", "d2/ded/class_b_t_1_1_inverter_node.html", null ],
-      [ "is_vector", "dd/da1/struct_b_t_1_1is__vector.html", null ],
-      [ "is_vector< std::vector< T, A > >", "d0/d5f/struct_b_t_1_1is__vector_3_01std_1_1vector_3_01_t_00_01_a_01_4_01_4.html", null ],
+      [ "is_shared_ptr", "de/dcd/struct_b_t_1_1is__shared__ptr.html", null ],
+      [ "is_shared_ptr< std::shared_ptr< U > >", "df/d93/struct_b_t_1_1is__shared__ptr_3_01std_1_1shared__ptr_3_01_u_01_4_01_4.html", null ],
       [ "JsonExporter", "d0/d64/class_b_t_1_1_json_exporter.html", "d0/d64/class_b_t_1_1_json_exporter" ],
       [ "KeepRunningUntilFailureNode", "de/d22/class_b_t_1_1_keep_running_until_failure_node.html", null ],
       [ "LeafNode", "d1/de2/class_b_t_1_1_leaf_node.html", null ],
@@ -70,9 +61,11 @@ var annotated_dup =
       [ "ManualSelectorNode", "dc/d0b/class_b_t_1_1_manual_selector_node.html", "dc/d0b/class_b_t_1_1_manual_selector_node" ],
       [ "MinitraceLogger", "de/d4f/class_b_t_1_1_minitrace_logger.html", null ],
       [ "NodeConfig", "dc/d26/struct_b_t_1_1_node_config.html", null ],
+      [ "NodeExecutionError", "d2/d33/class_b_t_1_1_node_execution_error.html", "d2/d33/class_b_t_1_1_node_execution_error" ],
       [ "ParallelAllNode", "d3/d02/class_b_t_1_1_parallel_all_node.html", "d3/d02/class_b_t_1_1_parallel_all_node" ],
       [ "ParallelNode", "d1/dee/class_b_t_1_1_parallel_node.html", "d1/dee/class_b_t_1_1_parallel_node" ],
       [ "Parser", "de/da6/class_b_t_1_1_parser.html", null ],
+      [ "PolymorphicCastRegistry", "d1/ddb/class_b_t_1_1_polymorphic_cast_registry.html", "d1/ddb/class_b_t_1_1_polymorphic_cast_registry" ],
       [ "PopFromQueue", "d7/d3a/class_b_t_1_1_pop_from_queue.html", "d7/d3a/class_b_t_1_1_pop_from_queue" ],
       [ "PortInfo", "d8/d5e/class_b_t_1_1_port_info.html", null ],
       [ "PreconditionNode", "d7/dd5/class_b_t_1_1_precondition_node.html", null ],
@@ -100,7 +93,7 @@ var annotated_dup =
       [ "SqliteLogger", "df/ddb/class_b_t_1_1_sqlite_logger.html", "df/ddb/class_b_t_1_1_sqlite_logger" ],
       [ "StampedValue", "d6/dfa/struct_b_t_1_1_stamped_value.html", null ],
       [ "StatefulActionNode", "d0/d1f/class_b_t_1_1_stateful_action_node.html", "d0/d1f/class_b_t_1_1_stateful_action_node" ],
-      [ "StatusChangeLogger", "d9/dbb/class_b_t_1_1_status_change_logger.html", null ],
+      [ "StatusChangeLogger", "d9/dbb/class_b_t_1_1_status_change_logger.html", "d9/dbb/class_b_t_1_1_status_change_logger" ],
       [ "StdCoutLogger", "d1/d52/class_b_t_1_1_std_cout_logger.html", null ],
       [ "SubTreeNode", "df/d34/class_b_t_1_1_sub_tree_node.html", "df/d34/class_b_t_1_1_sub_tree_node" ],
       [ "SwitchNode", "dc/dae/class_b_t_1_1_switch_node.html", "dc/dae/class_b_t_1_1_switch_node" ],
@@ -108,6 +101,7 @@ var annotated_dup =
       [ "TestNode", "d5/d7f/class_b_t_1_1_test_node.html", "d5/d7f/class_b_t_1_1_test_node" ],
       [ "TestNodeConfig", "d6/d58/struct_b_t_1_1_test_node_config.html", "d6/d58/struct_b_t_1_1_test_node_config" ],
       [ "ThreadedAction", "d2/d61/class_b_t_1_1_threaded_action.html", "d2/d61/class_b_t_1_1_threaded_action" ],
+      [ "TickBacktraceEntry", "d2/d50/struct_b_t_1_1_tick_backtrace_entry.html", null ],
       [ "TimeoutNode", "d4/d20/class_b_t_1_1_timeout_node.html", null ],
       [ "TimerQueue", "df/d4c/class_b_t_1_1_timer_queue.html", "df/d4c/class_b_t_1_1_timer_queue" ],
       [ "Timestamp", "d0/d59/struct_b_t_1_1_timestamp.html", null ],
@@ -115,6 +109,7 @@ var annotated_dup =
       [ "TreeNode", "da/d61/class_b_t_1_1_tree_node.html", "da/d61/class_b_t_1_1_tree_node" ],
       [ "TreeNodeManifest", "dc/d6c/struct_b_t_1_1_tree_node_manifest.html", null ],
       [ "TreeObserver", "d2/d2b/class_b_t_1_1_tree_observer.html", "d2/d2b/class_b_t_1_1_tree_observer" ],
+      [ "TryCatchNode", "d4/dc5/class_b_t_1_1_try_catch_node.html", "d4/dc5/class_b_t_1_1_try_catch_node" ],
       [ "TypeInfo", "d0/d34/class_b_t_1_1_type_info.html", null ],
       [ "UnsetBlackboardNode", "d1/d77/class_b_t_1_1_unset_blackboard_node.html", null ],
       [ "WakeUpSignal", "da/d2f/class_b_t_1_1_wake_up_signal.html", "da/d2f/class_b_t_1_1_wake_up_signal" ],

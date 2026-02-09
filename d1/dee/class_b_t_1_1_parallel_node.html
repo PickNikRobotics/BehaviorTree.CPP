@@ -17,6 +17,8 @@
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="../../doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -108,7 +110,7 @@ Inheritance diagram for BT::ParallelNode:</div>
 <div class="center"><img src="../../d9/da6/class_b_t_1_1_parallel_node__inherit__graph.png" border="0" usemap="#a_b_t_1_1_parallel_node_inherit__map" alt="Inheritance graph"/></div>
 <map name="a_b_t_1_1_parallel_node_inherit__map" id="a_b_t_1_1_parallel_node_inherit__map">
 <area shape="rect" title="The ParallelNode execute all its children concurrently, but not in separate threads!" alt="" coords="5,152,133,177"/>
-<area shape="rect" href="../../d6/ddb/class_b_t_1_1_control_node.html" title=" " alt="" coords="6,79,133,104"/>
+<area shape="rect" href="../../d6/ddb/class_b_t_1_1_control_node.html" title="The ControlNode is the base class for nodes that can have multiple children." alt="" coords="6,79,133,104"/>
 <area shape="rect" href="../../da/d61/class_b_t_1_1_tree_node.html" title="Abstract base class for Behavior Tree Nodes." alt="" coords="16,5,123,31"/>
 </map>
 <center><span class="legend">[<a target="top" href="../../graph_legend.html">legend</a>]</span></center></div>
@@ -118,7 +120,7 @@ Collaboration diagram for BT::ParallelNode:</div>
 <div class="center"><img src="../../d0/d43/class_b_t_1_1_parallel_node__coll__graph.png" border="0" usemap="#a_b_t_1_1_parallel_node_coll__map" alt="Collaboration graph"/></div>
 <map name="a_b_t_1_1_parallel_node_coll__map" id="a_b_t_1_1_parallel_node_coll__map">
 <area shape="rect" title="The ParallelNode execute all its children concurrently, but not in separate threads!" alt="" coords="5,256,133,281"/>
-<area shape="rect" href="../../d6/ddb/class_b_t_1_1_control_node.html" title=" " alt="" coords="6,181,133,207"/>
+<area shape="rect" href="../../d6/ddb/class_b_t_1_1_control_node.html" title="The ControlNode is the base class for nodes that can have multiple children." alt="" coords="6,181,133,207"/>
 <area shape="rect" href="../../da/d61/class_b_t_1_1_tree_node.html" title="Abstract base class for Behavior Tree Nodes." alt="" coords="16,5,123,31"/>
 <area shape="rect" title=" " alt="" coords="86,93,303,119"/>
 </map>
@@ -132,6 +134,18 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:accd3baec54202522232e1da904012a42"><td class="memItemLeft" align="right" valign="top"><a id="accd3baec54202522232e1da904012a42" name="accd3baec54202522232e1da904012a42"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>ParallelNode</b> (const std::string &amp;<a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#ac639db3ba4cca6f420b953f36350923c">name</a>, const <a class="el" href="../../dc/d26/struct_b_t_1_1_node_config.html">NodeConfig</a> &amp;<a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a7d17e161369b535793ed9c6cc0a6a0ac">config</a>)</td></tr>
 <tr class="separator:accd3baec54202522232e1da904012a42"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7ed8ca0398568e39e4b9ea13c913ef51"><td class="memItemLeft" align="right" valign="top"><a id="a7ed8ca0398568e39e4b9ea13c913ef51" name="a7ed8ca0398568e39e4b9ea13c913ef51"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ParallelNode</b> (const <a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;)=delete</td></tr>
+<tr class="separator:a7ed8ca0398568e39e4b9ea13c913ef51"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac35376f7c00d7adb51e4e113b494c6c2"><td class="memItemLeft" align="right" valign="top"><a id="ac35376f7c00d7adb51e4e113b494c6c2" name="ac35376f7c00d7adb51e4e113b494c6c2"></a>
+<a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;)=delete</td></tr>
+<tr class="separator:ac35376f7c00d7adb51e4e113b494c6c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8ec46cca25a2a899d3b21b7c9a0e4441"><td class="memItemLeft" align="right" valign="top"><a id="a8ec46cca25a2a899d3b21b7c9a0e4441" name="a8ec46cca25a2a899d3b21b7c9a0e4441"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ParallelNode</b> (<a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:a8ec46cca25a2a899d3b21b7c9a0e4441"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a01afa0d825a81cb4c71f5337078885d9"><td class="memItemLeft" align="right" valign="top"><a id="a01afa0d825a81cb4c71f5337078885d9" name="a01afa0d825a81cb4c71f5337078885d9"></a>
+<a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html">ParallelNode</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:a01afa0d825a81cb4c71f5337078885d9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0c36107c5f2569c9e3328c4bc8662f2a"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d1/dee/class_b_t_1_1_parallel_node.html#a0c36107c5f2569c9e3328c4bc8662f2a">halt</a> () override</td></tr>
 <tr class="separator:a0c36107c5f2569c9e3328c4bc8662f2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab06c2333132666ab8a64fe67d4916739"><td class="memItemLeft" align="right" valign="top"><a id="ab06c2333132666ab8a64fe67d4916739" name="ab06c2333132666ab8a64fe67d4916739"></a>
@@ -150,6 +164,18 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>setFailureThreshold</
 <tr class="memitem:a0f396b06b349ec6a138d4915a579eb01 inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="a0f396b06b349ec6a138d4915a579eb01" name="a0f396b06b349ec6a138d4915a579eb01"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>ControlNode</b> (const std::string &amp;<a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#ac639db3ba4cca6f420b953f36350923c">name</a>, const <a class="el" href="../../dc/d26/struct_b_t_1_1_node_config.html">NodeConfig</a> &amp;<a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a7d17e161369b535793ed9c6cc0a6a0ac">config</a>)</td></tr>
 <tr class="separator:a0f396b06b349ec6a138d4915a579eb01 inherit pub_methods_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a036cfce0d59eb58ea73c4b521f448f24 inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="a036cfce0d59eb58ea73c4b521f448f24" name="a036cfce0d59eb58ea73c4b521f448f24"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ControlNode</b> (const <a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;)=delete</td></tr>
+<tr class="separator:a036cfce0d59eb58ea73c4b521f448f24 inherit pub_methods_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1ccb0d338c5f8a92248bd85b2b50dd5f inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="a1ccb0d338c5f8a92248bd85b2b50dd5f" name="a1ccb0d338c5f8a92248bd85b2b50dd5f"></a>
+<a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;)=delete</td></tr>
+<tr class="separator:a1ccb0d338c5f8a92248bd85b2b50dd5f inherit pub_methods_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a493ea6951ad9f4884068d98822a0bf19 inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="a493ea6951ad9f4884068d98822a0bf19" name="a493ea6951ad9f4884068d98822a0bf19"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>ControlNode</b> (<a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:a493ea6951ad9f4884068d98822a0bf19 inherit pub_methods_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aaa51b0287b1833ac3a9850b274014cc4 inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="aaa51b0287b1833ac3a9850b274014cc4" name="aaa51b0287b1833ac3a9850b274014cc4"></a>
+<a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../d6/ddb/class_b_t_1_1_control_node.html">ControlNode</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:aaa51b0287b1833ac3a9850b274014cc4 inherit pub_methods_class_b_t_1_1_control_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7a0eef4ae2da07156bcc49f304bbbf4f inherit pub_methods_class_b_t_1_1_control_node"><td class="memItemLeft" align="right" valign="top"><a id="a7a0eef4ae2da07156bcc49f304bbbf4f" name="a7a0eef4ae2da07156bcc49f304bbbf4f"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>addChild</b> (<a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> *child)</td></tr>
 <tr class="memdesc:a7a0eef4ae2da07156bcc49f304bbbf4f inherit pub_methods_class_b_t_1_1_control_node"><td class="mdescLeft">&#160;</td><td class="mdescRight">The method used to add nodes to the children vector. <br /></td></tr>
@@ -289,12 +315,9 @@ static <a class="el" href="../../d2/d8d/namespace_b_t.html#a7ed468293f4e7dc7ebba
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="inherited" name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_types_class_b_t_1_1_tree_node"><td colspan="2" onclick="javascript:toggleInherit('pub_types_class_b_t_1_1_tree_node')"><img src="../../closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">BT::TreeNode</a></td></tr>
-<tr class="memitem:ac94515d58731d4fe141dff36a20f6aad inherit pub_types_class_b_t_1_1_tree_node"><td class="memItemLeft" align="right" valign="top"><a id="ac94515d58731d4fe141dff36a20f6aad" name="ac94515d58731d4fe141dff36a20f6aad"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>Ptr</b> = std::shared_ptr&lt; <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> &gt;</td></tr>
-<tr class="separator:ac94515d58731d4fe141dff36a20f6aad inherit pub_types_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a69ca836ca643e797b694cc0693ead61c inherit pub_types_class_b_t_1_1_tree_node"><td class="memItemLeft" align="right" valign="top"><a id="a69ca836ca643e797b694cc0693ead61c" name="a69ca836ca643e797b694cc0693ead61c"></a>
-using&#160;</td><td class="memItemRight" valign="bottom"><b>ConstPtr</b> = std::shared_ptr&lt; const <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> &gt;</td></tr>
-<tr class="separator:a69ca836ca643e797b694cc0693ead61c inherit pub_types_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6eda9ca3529883ba53ffec96fd3bd486 inherit pub_types_class_b_t_1_1_tree_node"><td class="memItemLeft" align="right" valign="top"><a id="a6eda9ca3529883ba53ffec96fd3bd486" name="a6eda9ca3529883ba53ffec96fd3bd486"></a>
+typedef std::shared_ptr&lt; <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Ptr</b></td></tr>
+<tr class="separator:a6eda9ca3529883ba53ffec96fd3bd486 inherit pub_types_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3b2b4344bb9e319b65f3b3046bb2f186 inherit pub_types_class_b_t_1_1_tree_node"><td class="memItemLeft" align="right" valign="top"><a id="a3b2b4344bb9e319b65f3b3046bb2f186" name="a3b2b4344bb9e319b65f3b3046bb2f186"></a>
 using&#160;</td><td class="memItemRight" valign="bottom"><b>StatusChangeSignal</b> = <a class="el" href="../../d1/d73/class_b_t_1_1_signal.html">Signal</a>&lt; TimePoint, const <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html">TreeNode</a> &amp;, <a class="el" href="../../d2/d8d/namespace_b_t.html#a1414a8362678cd4081eeb30b72845b4e">NodeStatus</a>, <a class="el" href="../../d2/d8d/namespace_b_t.html#a1414a8362678cd4081eeb30b72845b4e">NodeStatus</a> &gt;</td></tr>
 <tr class="separator:a3b2b4344bb9e319b65f3b3046bb2f186 inherit pub_types_class_b_t_1_1_tree_node"><td class="memSeparator" colspan="2">&#160;</td></tr>

@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.6"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>BehaviorTree: BT::TimerQueue&lt; _Clock, _Duration &gt; Class Template Reference</title>
+<title>BehaviorTree: BT::TimerQueue&lt; ClockT, DurationT &gt; Class Template Reference</title>
 <link href="../../tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="../../jquery.js"></script>
 <script type="text/javascript" src="../../dynsections.js"></script>
@@ -17,6 +17,8 @@
 <script type="text/javascript" src="../../search/searchdata.js"></script>
 <script type="text/javascript" src="../../search/search.js"></script>
 <link href="../../doxygen.css" rel="stylesheet" type="text/css" />
+<link href="../../doxygen-awesome.css" rel="stylesheet" type="text/css"/>
+<link href="../../doxygen-awesome-sidebar-only.css" rel="stylesheet" type="text/css"/>
 </head>
 <body>
 <div id="top"><!-- do not remove this div, it is closed by doxygen! -->
@@ -94,24 +96,36 @@ $(document).ready(function(){initNavTree('df/d4c/class_b_t_1_1_timer_queue.html'
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="../../d2/d62/class_b_t_1_1_timer_queue-members.html">List of all members</a>  </div>
-  <div class="headertitle"><div class="title">BT::TimerQueue&lt; _Clock, _Duration &gt; Class Template Reference</div></div>
+  <div class="headertitle"><div class="title">BT::TimerQueue&lt; ClockT, DurationT &gt; Class Template Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-methods" name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a386ac8a89de8315a3f81cb5e88c30cac"><td class="memItemLeft" align="right" valign="top"><a id="a386ac8a89de8315a3f81cb5e88c30cac" name="a386ac8a89de8315a3f81cb5e88c30cac"></a>
+<tr class="memitem:aab95a86842b3bee5395931409cd1abbe"><td class="memItemLeft" align="right" valign="top"><a id="aab95a86842b3bee5395931409cd1abbe" name="aab95a86842b3bee5395931409cd1abbe"></a>
 uint64_t&#160;</td><td class="memItemRight" valign="bottom"><b>add</b> (std::chrono::milliseconds milliseconds, std::function&lt; void(bool)&gt; handler)</td></tr>
-<tr class="memdesc:a386ac8a89de8315a3f81cb5e88c30cac"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a new timer. <br /></td></tr>
-<tr class="separator:a386ac8a89de8315a3f81cb5e88c30cac"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5564436f2a8e071bfdf59be5daea279a"><td class="memItemLeft" align="right" valign="top"><a id="a5564436f2a8e071bfdf59be5daea279a" name="a5564436f2a8e071bfdf59be5daea279a"></a>
+<tr class="memdesc:aab95a86842b3bee5395931409cd1abbe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a new timer. <br /></td></tr>
+<tr class="separator:aab95a86842b3bee5395931409cd1abbe"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa0f1e7533369e4f6bb2173d9e78d2259"><td class="memItemLeft" align="right" valign="top"><a id="aa0f1e7533369e4f6bb2173d9e78d2259" name="aa0f1e7533369e4f6bb2173d9e78d2259"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>cancel</b> (uint64_t id)</td></tr>
-<tr class="memdesc:a5564436f2a8e071bfdf59be5daea279a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels the specified timer. <br /></td></tr>
-<tr class="separator:a5564436f2a8e071bfdf59be5daea279a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a663265e8c343946094e5d16a1b59d483"><td class="memItemLeft" align="right" valign="top"><a id="a663265e8c343946094e5d16a1b59d483" name="a663265e8c343946094e5d16a1b59d483"></a>
+<tr class="memdesc:aa0f1e7533369e4f6bb2173d9e78d2259"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels the specified timer. <br /></td></tr>
+<tr class="separator:aa0f1e7533369e4f6bb2173d9e78d2259"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8bd9cbfcbf78991b017f9f7efe728149"><td class="memItemLeft" align="right" valign="top"><a id="a8bd9cbfcbf78991b017f9f7efe728149" name="a8bd9cbfcbf78991b017f9f7efe728149"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>cancelAll</b> ()</td></tr>
-<tr class="memdesc:a663265e8c343946094e5d16a1b59d483"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels all timers. <br /></td></tr>
-<tr class="separator:a663265e8c343946094e5d16a1b59d483"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memdesc:a8bd9cbfcbf78991b017f9f7efe728149"><td class="mdescLeft">&#160;</td><td class="mdescRight">Cancels all timers. <br /></td></tr>
+<tr class="separator:a8bd9cbfcbf78991b017f9f7efe728149"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad1e29f91abf4ea3b6f59eb2ae2ee38c"><td class="memItemLeft" align="right" valign="top"><a id="aad1e29f91abf4ea3b6f59eb2ae2ee38c" name="aad1e29f91abf4ea3b6f59eb2ae2ee38c"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>TimerQueue</b> (const <a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;)=delete</td></tr>
+<tr class="separator:aad1e29f91abf4ea3b6f59eb2ae2ee38c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5b13ebe334ee5323e93d3b1317ae24cd"><td class="memItemLeft" align="right" valign="top"><a id="a5b13ebe334ee5323e93d3b1317ae24cd" name="a5b13ebe334ee5323e93d3b1317ae24cd"></a>
+<a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;)=delete</td></tr>
+<tr class="separator:a5b13ebe334ee5323e93d3b1317ae24cd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0010f0018148ddd89867c5b6a4a0d307"><td class="memItemLeft" align="right" valign="top"><a id="a0010f0018148ddd89867c5b6a4a0d307" name="a0010f0018148ddd89867c5b6a4a0d307"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>TimerQueue</b> (<a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:a0010f0018148ddd89867c5b6a4a0d307"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad61f24f5e43729dbeeb674af0e856fd0"><td class="memItemLeft" align="right" valign="top"><a id="ad61f24f5e43729dbeeb674af0e856fd0" name="ad61f24f5e43729dbeeb674af0e856fd0"></a>
+<a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (<a class="el" href="../../df/d4c/class_b_t_1_1_timer_queue.html">TimerQueue</a> &amp;&amp;)=delete</td></tr>
+<tr class="separator:ad61f24f5e43729dbeeb674af0e856fd0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <hr/>The documentation for this class was generated from the following file:<ul>
 <li>include/behaviortree_cpp/utils/<a class="el" href="../../d2/dbf/timer__queue_8h_source.html">timer_queue.h</a></li>
