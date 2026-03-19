@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <iostream>
 #include <functional>
@@ -446,6 +448,12 @@ template <typename T = AnyTypeAllowed>
     throw RuntimeError("The name of a port must not be `name` or `ID` "
                        "and must start with an alphabetic character. "
                        "Underscore is reserved.");
+  }
+  if(std::any_of(sname.begin(), sname.end(),
+                 [](unsigned char c) { return std::isspace(c); }))
+  {
+    throw RuntimeError(
+        StrCat("The name of a port must not contain whitespace: '", sname, "'"));
   }
 
   std::pair<std::string, PortInfo> out;
