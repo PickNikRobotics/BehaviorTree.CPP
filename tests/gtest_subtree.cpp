@@ -620,6 +620,48 @@ TEST(SubTree, SubtreeModels)
   tree.tickWhileRunning();
 }
 
+TEST(SubTree, WhitespaceInSubtreeModel)
+{
+  // clang-format off
+
+  static const char* xml_text = R"(
+<root main_tree_to_execute = "MainTree" BTCPP_format="4">
+  <TreeNodesModel>
+    <SubTree ID="MySub">
+      <input_port name="port with space" default="42"/>
+    </SubTree>
+  </TreeNodesModel>
+
+  <BehaviorTree ID="MainTree">
+    <Sequence>
+      <SubTree ID="MySub" />
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="MySub">
+    <Sequence>
+      <AlwaysSuccess />
+    </Sequence>
+  </BehaviorTree>
+</root>
+ )";
+
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+  try
+  {
+    auto _ = factory.createTreeFromText(xml_text);
+  }
+  catch(RuntimeError e)
+  {
+    EXPECT_NE(std::string_view(e.what()).find("not contain whitespace"),
+              std::string_view::npos);
+    return;
+  }
+  FAIL() << "Exception was not thrown.";
+}
+
 class PrintToConsole : public BT::SyncActionNode
 {
 public:

@@ -10,6 +10,8 @@
 *   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <algorithm>
+#include <cctype>
 #include <charconv>
 #include <cstdio>
 #include <cstring>
@@ -19,7 +21,9 @@
 #include <list>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <typeindex>
+
 #include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/utils/strcat.hpp"
 
@@ -215,6 +219,13 @@ void BT::XMLParser::PImpl::loadSubtreeModel(const XMLElement* xml_root)
           if(!name)
           {
             throw RuntimeError("Missing attribute [name] in port (SubTree model)");
+          }
+          std::string_view sname(name);
+          if(std::any_of(sname.begin(), sname.end(),
+                         [](unsigned char c) { return std::isspace(c); }))
+          {
+            throw RuntimeError(
+                StrCat("The name of a port must not contain whitespace: '", sname, "'"));
           }
           if(auto default_value = port_node->Attribute("default"))
           {
