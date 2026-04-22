@@ -350,6 +350,12 @@ struct Timestamp
 
 [[nodiscard]] bool IsReservedAttribute(StringView str);
 
+/// Throws RuntimeError if the string contains any whitespace character.
+/// Used by port-creation paths (CreatePort and TreeNodesModel XML parsing)
+/// to reject port names like "my port" that would be ambiguous in blackboard
+/// remappings.
+void ThrowIfPortNameContainsWhitespace(StringView name);
+
 class TypeInfo
 {
 public:
@@ -449,12 +455,7 @@ template <typename T = AnyTypeAllowed>
                        "and must start with an alphabetic character. "
                        "Underscore is reserved.");
   }
-  if(std::any_of(sname.begin(), sname.end(),
-                 [](unsigned char c) { return std::isspace(c); }))
-  {
-    throw RuntimeError(
-        StrCat("The name of a port must not contain whitespace: '", sname, "'"));
-  }
+  ThrowIfPortNameContainsWhitespace(sname);
 
   std::pair<std::string, PortInfo> out;
 

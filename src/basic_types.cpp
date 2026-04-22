@@ -2,6 +2,8 @@
 #include "behaviortree_cpp/tree_node.h"
 #include "behaviortree_cpp/json_export.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <clocale>
@@ -463,6 +465,17 @@ bool IsReservedAttribute(StringView str)
     }
   }
   return str == "name" || str == "ID" || str == "_autoremap";
+}
+
+void ThrowIfPortNameContainsWhitespace(StringView name)
+{
+  const auto has_whitespace = std::any_of(
+      name.begin(), name.end(), [](unsigned char c) { return std::isspace(c); });
+  if(has_whitespace)
+  {
+    throw RuntimeError(
+        StrCat("The name of a port must not contain whitespace: '", name, "'"));
+  }
 }
 
 Any convertFromJSON(StringView json_text, std::type_index type)

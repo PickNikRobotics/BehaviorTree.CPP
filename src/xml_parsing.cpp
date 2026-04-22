@@ -221,12 +221,7 @@ void BT::XMLParser::PImpl::loadSubtreeModel(const XMLElement* xml_root)
             throw RuntimeError("Missing attribute [name] in port (SubTree model)");
           }
           std::string_view sname(name);
-          if(std::any_of(sname.begin(), sname.end(),
-                         [](unsigned char c) { return std::isspace(c); }))
-          {
-            throw RuntimeError(
-                StrCat("The name of a port must not contain whitespace: '", sname, "'"));
-          }
+          ThrowIfPortNameContainsWhitespace(sname);
           if(auto default_value = port_node->Attribute("default"))
           {
             port.setDefaultValue(default_value);
