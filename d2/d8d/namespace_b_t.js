@@ -129,6 +129,7 @@ var namespace_b_t =
     [ "OutputPort", "d2/d8d/namespace_b_t.html#a8ac171179c71fc0def23cf28e36b8ee2", null ],
     [ "printTreeRecursively", "d2/d8d/namespace_b_t.html#a81fc68e6864ea125011a4ab64e9d6dc3", null ],
     [ "SerializeTransition", "d2/d8d/namespace_b_t.html#a1e5dd1ca538e17930637816c78ccba5a", null ],
+    [ "ThrowIfPortNameContainsWhitespace", "d2/d8d/namespace_b_t.html#a2d32ce40425df1053eb0dce5ad5c52bc", null ],
     [ "toStr", "d2/d8d/namespace_b_t.html#a59b08b9acce3233964741ac39102abda", null ],
     [ "toStr", "d2/d8d/namespace_b_t.html#acdc7285d759ccee669271f9884941cf9", null ],
     [ "ValidateScript", "d2/d8d/namespace_b_t.html#a28330518fc63ccc458b55303d05b18d1", null ],

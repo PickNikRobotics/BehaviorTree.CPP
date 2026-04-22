@@ -627,6 +627,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>IsAllowedPortName</b>
 <tr class="memitem:a074c47a72ad0a540ad6b978d31fe8275"><td class="memItemLeft" align="right" valign="top"><a id="a074c47a72ad0a540ad6b978d31fe8275" name="a074c47a72ad0a540ad6b978d31fe8275"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>IsReservedAttribute</b> (StringView str)</td></tr>
 <tr class="separator:a074c47a72ad0a540ad6b978d31fe8275"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2d32ce40425df1053eb0dce5ad5c52bc"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d8d/namespace_b_t.html#a2d32ce40425df1053eb0dce5ad5c52bc">ThrowIfPortNameContainsWhitespace</a> (StringView name)</td></tr>
+<tr class="separator:a2d32ce40425df1053eb0dce5ad5c52bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a198312e3776d7af945108b79e9296df9"><td class="memTemplParams" colspan="2"><a id="a198312e3776d7af945108b79e9296df9" name="a198312e3776d7af945108b79e9296df9"></a>
 template&lt;typename T  = AnyTypeAllowed&gt; </td></tr>
 <tr class="memitem:a198312e3776d7af945108b79e9296df9"><td class="memTemplItemLeft" align="right" valign="top">std::pair&lt; std::string, <a class="el" href="../../d8/d5e/class_b_t_1_1_port_info.html">PortInfo</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>CreatePort</b> (PortDirection direction, StringView name, StringView description={})</td></tr>
@@ -1566,6 +1568,25 @@ template&lt;typename T  = AnyTypeAllowed&gt; </div>
 </table>
 </div><div class="memdoc">
 <p>Serialize manually the information about state transition No flatbuffer serialization here </p>
+
+</div>
+</div>
+<a id="a2d32ce40425df1053eb0dce5ad5c52bc" name="a2d32ce40425df1053eb0dce5ad5c52bc"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2d32ce40425df1053eb0dce5ad5c52bc">&#9670;&#160;</a></span>ThrowIfPortNameContainsWhitespace()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void BT::ThrowIfPortNameContainsWhitespace </td>
+          <td>(</td>
+          <td class="paramtype">StringView&#160;</td>
+          <td class="paramname"><em>name</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Throws <a class="el" href="../../da/d35/class_b_t_1_1_runtime_error.html">RuntimeError</a> if the string contains any whitespace character. Used by port-creation paths (CreatePort and TreeNodesModel XML parsing) to reject port names like "my port" that would be ambiguous in blackboard remappings. </p>
 
 </div>
 </div>
