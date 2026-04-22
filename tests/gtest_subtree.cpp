@@ -620,6 +620,48 @@ TEST(SubTree, SubtreeModels)
   tree.tickWhileRunning();
 }
 
+TEST(SubTree, WhitespaceInSubtreeModel)
+{
+  // clang-format off
+
+  static const char* xml_text = R"(
+<root main_tree_to_execute = "MainTree" BTCPP_format="4">
+  <TreeNodesModel>
+    <SubTree ID="MySub">
+      <input_port name="port with space" default="42"/>
+    </SubTree>
+  </TreeNodesModel>
+
+  <BehaviorTree ID="MainTree">
+    <Sequence>
+      <SubTree ID="MySub" />
+    </Sequence>
+  </BehaviorTree>
+
+  <BehaviorTree ID="MySub">
+    <Sequence>
+      <AlwaysSuccess />
+    </Sequence>
+  </BehaviorTree>
+</root>
+ )";
+
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+  try
+  {
+    auto _ = factory.createTreeFromText(xml_text);
+  }
+  catch(RuntimeError e)
+  {
+    EXPECT_NE(std::string_view(e.what()).find("not contain whitespace"),
+              std::string_view::npos);
+    return;
+  }
+  FAIL() << "Exception was not thrown.";
+}
+
 class PrintToConsole : public BT::SyncActionNode
 {
 public:
@@ -756,4 +798,42 @@ TEST(SubTree, SubtreeNameNotRegistered)
 
   ASSERT_ANY_THROW(auto tree = factory.createTreeFromText(xml_text));
   ASSERT_ANY_THROW(factory.registerBehaviorTreeFromText(xml_text));
+}
+
+// Regression test: literal numeric values passed to subtrees should preserve
+// their numeric type so that Script expressions can do arithmetic.
+TEST(SubTree, LiteralNumericPortsPreserveType)
+{
+  // clang-format off
+  static const char* xml_text = R"(
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <SubTree ID="DoMath" int_val="42" dbl_val="3.14" str_val="hello"
+                     remapped_val="{from_parent}" />
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="DoMath">
+        <Sequence>
+            <ScriptCondition code=" int_val + 1 == 43 " />
+            <ScriptCondition code=" dbl_val > 3.0 " />
+            <ScriptCondition code=" remapped_val + 1 == 101 " />
+        </Sequence>
+    </BehaviorTree>
+
+</root>
+)";
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+
+  auto tree = factory.createTreeFromText(xml_text);
+
+  // Set the remapped parent value as an integer
+  tree.rootBlackboard()->set("from_parent", 100);
+
+  const auto status = tree.tickWhileRunning();
+  ASSERT_EQ(status, NodeStatus::SUCCESS);
 }

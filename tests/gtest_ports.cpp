@@ -861,3 +861,13 @@ TEST(PortTest, VectorAny)
   ASSERT_NO_THROW(status = tree.tickOnce());
   ASSERT_EQ(status, NodeStatus::FAILURE);
 }
+
+TEST(PortTest, WhitespaceInPortName)
+{
+  ASSERT_ANY_THROW(BT::InputPort<std::string>("port name"));
+  ASSERT_ANY_THROW(BT::InputPort<std::string>("port\tname"));
+  ASSERT_ANY_THROW(BT::InputPort<std::string>("port\nname"));
+  ASSERT_ANY_THROW(BT::InputPort<std::string>(" leading"));
+  ASSERT_ANY_THROW(BT::InputPort<std::string>("trailing "));
+  ASSERT_NO_THROW(BT::InputPort<std::string>("valid_port_name"));
+}
