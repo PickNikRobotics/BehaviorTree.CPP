@@ -9,6 +9,8 @@ var class_b_t_1_1_tree_node =
     [ "getInput", "da/d61/class_b_t_1_1_tree_node.html#ae921e5800a82b7591cb711c710d49725", null ],
     [ "getInputStamped", "da/d61/class_b_t_1_1_tree_node.html#ab7b260cce963ad5b77c6fbb07d5d85b6", null ],
     [ "getInputStamped", "da/d61/class_b_t_1_1_tree_node.html#a4fd8498410d2344cc9af272ea97dfd09", null ],
+    [ "getInputStampedWithDiagnostic", "da/d61/class_b_t_1_1_tree_node.html#a884860a22b1c363d07679652e34854f0", null ],
+    [ "getInputWithDiagnostic", "da/d61/class_b_t_1_1_tree_node.html#a8e40bc8b31711165532f900fc1a97f21", null ],
     [ "getLockedPortContent", "da/d61/class_b_t_1_1_tree_node.html#ac089e3035b5cb8daf7537e6d86485e3a", null ],
     [ "name", "da/d61/class_b_t_1_1_tree_node.html#ac639db3ba4cca6f420b953f36350923c", null ],
     [ "registrationName", "da/d61/class_b_t_1_1_tree_node.html#a220f3387673ef71c3e47ea320b106c11", null ],

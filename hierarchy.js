@@ -61,6 +61,7 @@ var hierarchy =
     [ "BT::Parser", "de/da6/class_b_t_1_1_parser.html", [
       [ "BT::XMLParser", "d8/d05/class_b_t_1_1_x_m_l_parser.html", null ]
     ] ],
+    [ "BT::PortInputError", "d7/d16/struct_b_t_1_1_port_input_error.html", null ],
     [ "lexy::dsl::prefix_op", null, [
       [ "BT::Grammar::Expression::bit_prefix", "dc/df7/struct_b_t_1_1_grammar_1_1_expression_1_1bit__prefix.html", null ],
       [ "BT::Grammar::Expression::math_prefix", "d0/d26/struct_b_t_1_1_grammar_1_1_expression_1_1math__prefix.html", null ]

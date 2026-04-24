@@ -44,6 +44,7 @@ var namespace_b_t =
     [ "Parser", "de/da6/class_b_t_1_1_parser.html", null ],
     [ "PopFromQueue", "d7/d3a/class_b_t_1_1_pop_from_queue.html", "d7/d3a/class_b_t_1_1_pop_from_queue" ],
     [ "PortInfo", "d8/d5e/class_b_t_1_1_port_info.html", null ],
+    [ "PortInputError", "d7/d16/struct_b_t_1_1_port_input_error.html", null ],
     [ "PreconditionNode", "d7/dd5/class_b_t_1_1_precondition_node.html", null ],
     [ "ProtectedQueue", "d6/dee/struct_b_t_1_1_protected_queue.html", null ],
     [ "QueueSize", "d9/d8c/class_b_t_1_1_queue_size.html", "d9/d8c/class_b_t_1_1_queue_size" ],
@@ -108,6 +109,16 @@ var namespace_b_t =
       [ "CONTROL", "d2/d8d/namespace_b_t.html#a86a6454c13791311dface943d837363eac861cd34025f9002df5912d623326130", null ],
       [ "DECORATOR", "d2/d8d/namespace_b_t.html#a86a6454c13791311dface943d837363ea328f58520ec7de39622da273d415c408", null ],
       [ "SUBTREE", "d2/d8d/namespace_b_t.html#a86a6454c13791311dface943d837363eaaec2090d0bba165a11a2dfa6c2cc301c", null ]
+    ] ],
+    [ "PortError", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4e", [
+      [ "ManifestMissing", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea61c983f4503a51d6f40bca249f65be0f", null ],
+      [ "ManifestKeyMissing", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea393d5e13f87874c41c497be1c8a84b37", null ],
+      [ "NoDefaultNoWiring", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ead6e4768930070c7e6dedda63edbe1e36", null ],
+      [ "BlackboardKeyNotFound", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea57473b26d71fdcc55465cb29c18a7062", null ],
+      [ "BlackboardEntryEmpty", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea23bae6748df500094da0cf78e5b2fe43", null ],
+      [ "InvalidBlackboard", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eaa7522e9952bb94742bd901c71b539081", null ],
+      [ "ConversionFailed", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eaff957d0751db2f27185a73e9b7485b9f", null ],
+      [ "CastFailed", "d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eafb446d480af52b68cf929f70953db7cf", null ]
     ] ],
     [ "BidirectionalPort", "d2/d8d/namespace_b_t.html#aa5246156c75012e4106eb05bc9c3cf47", null ],
     [ "BidirectionalPort", "d2/d8d/namespace_b_t.html#a13321f9dceb6909198966973042a13a1", null ],

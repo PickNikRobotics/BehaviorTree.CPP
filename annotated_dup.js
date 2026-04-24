@@ -75,6 +75,7 @@ var annotated_dup =
       [ "Parser", "de/da6/class_b_t_1_1_parser.html", null ],
       [ "PopFromQueue", "d7/d3a/class_b_t_1_1_pop_from_queue.html", "d7/d3a/class_b_t_1_1_pop_from_queue" ],
       [ "PortInfo", "d8/d5e/class_b_t_1_1_port_info.html", null ],
+      [ "PortInputError", "d7/d16/struct_b_t_1_1_port_input_error.html", null ],
       [ "PreconditionNode", "d7/dd5/class_b_t_1_1_precondition_node.html", null ],
       [ "ProtectedQueue", "d6/dee/struct_b_t_1_1_protected_queue.html", null ],
       [ "QueueSize", "d9/d8c/class_b_t_1_1_queue_size.html", "d9/d8c/class_b_t_1_1_queue_size" ],

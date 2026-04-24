@@ -216,6 +216,9 @@ Classes</h2></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d8/d5e/class_b_t_1_1_port_info.html">PortInfo</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html">PortInputError</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Diagnostic error returned by <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a884860a22b1c363d07679652e34854f0" title="Same as getInputStamped(key, destination) but returns a structured PortInputError on failure,...">TreeNode::getInputStampedWithDiagnostic()</a>.  <a href="../../d7/d16/struct_b_t_1_1_port_input_error.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d7/dd5/class_b_t_1_1_precondition_node.html">PreconditionNode</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d6/dee/struct_b_t_1_1_protected_queue.html">ProtectedQueue</a></td></tr>
@@ -436,6 +439,20 @@ Enumerations</h2></td></tr>
 , <b>INOUT</b>
  }</td></tr>
 <tr class="separator:a3fa2e558c43f8ef869484be868eac159"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c9680eb152fad9cfd96a7a0641aad4e"><td class="memItemLeft" align="right" valign="top">enum class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4e">PortError</a> : uint8_t { <br />
+&#160;&#160;<a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea61c983f4503a51d6f40bca249f65be0f">ManifestMissing</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea393d5e13f87874c41c497be1c8a84b37">ManifestKeyMissing</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ead6e4768930070c7e6dedda63edbe1e36">NoDefaultNoWiring</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea57473b26d71fdcc55465cb29c18a7062">BlackboardKeyNotFound</a>
+, <br />
+&#160;&#160;<a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4ea23bae6748df500094da0cf78e5b2fe43">BlackboardEntryEmpty</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eaa7522e9952bb94742bd901c71b539081">InvalidBlackboard</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eaff957d0751db2f27185a73e9b7485b9f">ConversionFailed</a>
+, <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4eafb446d480af52b68cf929f70953db7cf">CastFailed</a>
+<br />
+ }</td></tr>
+<tr class="memdesc:a5c9680eb152fad9cfd96a7a0641aad4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Machine-readable cause for why an input port could not be read.  <a href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4e">More...</a><br /></td></tr>
+<tr class="separator:a5c9680eb152fad9cfd96a7a0641aad4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a48001cdc54ea73b84f32a04197b10984"><td class="memItemLeft" align="right" valign="top"><a id="a48001cdc54ea73b84f32a04197b10984" name="a48001cdc54ea73b84f32a04197b10984"></a>enum class &#160;</td><td class="memItemRight" valign="bottom"><b>TimestampType</b> { <b>absolute</b>
 , <b>relative</b>
  }</td></tr>
@@ -956,6 +973,52 @@ else{
 </table>
 </div><div class="memdoc">
 <p>Enumerates the states every node can be in after execution during a particular time step. IMPORTANT: Your custom nodes should NEVER return IDLE. </p>
+
+</div>
+</div>
+<a id="a5c9680eb152fad9cfd96a7a0641aad4e" name="a5c9680eb152fad9cfd96a7a0641aad4e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5c9680eb152fad9cfd96a7a0641aad4e">&#9670;&#160;</a></span>PortError</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum class <a class="el" href="../../d2/d8d/namespace_b_t.html#a5c9680eb152fad9cfd96a7a0641aad4e">BT::PortError</a> : uint8_t</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">strong</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Machine-readable cause for why an input port could not be read. </p>
+<p>The plain string error returned by <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a4fd8498410d2344cc9af272ea97dfd09" title="getInputStamped is similar to getInput(dey, destination), but it returns also the Timestamp object,...">TreeNode::getInputStamped()</a> is fine for console messages, but callers that want to react differently to different failure modes (for example, "the user wired a blackboard key but forgot to
+populate it" versus "the port is simply unwired and the behavior should
+fall back to its default") cannot tell those cases apart from a string.</p>
+<p><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a884860a22b1c363d07679652e34854f0" title="Same as getInputStamped(key, destination) but returns a structured PortInputError on failure,...">TreeNode::getInputStampedWithDiagnostic()</a> returns this enum alongside the original human-readable message so upstream code can make that distinction. </p>
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4ea61c983f4503a51d6f40bca249f65be0f" name="a5c9680eb152fad9cfd96a7a0641aad4ea61c983f4503a51d6f40bca249f65be0f"></a>ManifestMissing&#160;</td><td class="fielddoc"><p>config().manifest is null and the port has no XML entry. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4ea393d5e13f87874c41c497be1c8a84b37" name="a5c9680eb152fad9cfd96a7a0641aad4ea393d5e13f87874c41c497be1c8a84b37"></a>ManifestKeyMissing&#160;</td><td class="fielddoc"><p>The key is not in the manifest and not in the XML. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4ead6e4768930070c7e6dedda63edbe1e36" name="a5c9680eb152fad9cfd96a7a0641aad4ead6e4768930070c7e6dedda63edbe1e36"></a>NoDefaultNoWiring&#160;</td><td class="fielddoc"><p>The manifest has the key but no default value and the XML did not wire it. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4ea57473b26d71fdcc55465cb29c18a7062" name="a5c9680eb152fad9cfd96a7a0641aad4ea57473b26d71fdcc55465cb29c18a7062"></a>BlackboardKeyNotFound&#160;</td><td class="fielddoc"><p>The port is wired to {foo} but the blackboard has no entry called foo. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4ea23bae6748df500094da0cf78e5b2fe43" name="a5c9680eb152fad9cfd96a7a0641aad4ea23bae6748df500094da0cf78e5b2fe43"></a>BlackboardEntryEmpty&#160;</td><td class="fielddoc"><p>The blackboard entry exists but its value is empty. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4eaa7522e9952bb94742bd901c71b539081" name="a5c9680eb152fad9cfd96a7a0641aad4eaa7522e9952bb94742bd901c71b539081"></a>InvalidBlackboard&#160;</td><td class="fielddoc"><p>config().blackboard is null. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4eaff957d0751db2f27185a73e9b7485b9f" name="a5c9680eb152fad9cfd96a7a0641aad4eaff957d0751db2f27185a73e9b7485b9f"></a>ConversionFailed&#160;</td><td class="fielddoc"><p>parseString&lt;T&gt;() threw while converting a string to T. </p>
+</td></tr>
+<tr><td class="fieldname"><a id="a5c9680eb152fad9cfd96a7a0641aad4eafb446d480af52b68cf929f70953db7cf" name="a5c9680eb152fad9cfd96a7a0641aad4eafb446d480af52b68cf929f70953db7cf"></a>CastFailed&#160;</td><td class="fielddoc"><p>Any::cast&lt;T&gt;() or a vector element cast threw. </p>
+</td></tr>
+</table>
 
 </div>
 </div>

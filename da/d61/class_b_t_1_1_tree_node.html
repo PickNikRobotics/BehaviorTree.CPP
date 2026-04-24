@@ -254,12 +254,19 @@ const std::string &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>re
 <tr class="memitem:a4fd8498410d2344cc9af272ea97dfd09"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d2/d8d/namespace_b_t.html#a7ed468293f4e7dc7ebbaca1a475526f3">Expected</a>&lt; <a class="el" href="../../d0/d59/struct_b_t_1_1_timestamp.html">Timestamp</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a4fd8498410d2344cc9af272ea97dfd09">getInputStamped</a> (const std::string &amp;key, T &amp;destination) const</td></tr>
 <tr class="memdesc:a4fd8498410d2344cc9af272ea97dfd09"><td class="mdescLeft">&#160;</td><td class="mdescRight">getInputStamped is similar to getInput(dey, destination), but it returns also the <a class="el" href="../../d0/d59/struct_b_t_1_1_timestamp.html">Timestamp</a> object, that can be used to check if a value was updated and when.  <br /></td></tr>
 <tr class="separator:a4fd8498410d2344cc9af272ea97dfd09"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a884860a22b1c363d07679652e34854f0"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a884860a22b1c363d07679652e34854f0"><td class="memTemplItemLeft" align="right" valign="top">nonstd::expected&lt; <a class="el" href="../../d0/d59/struct_b_t_1_1_timestamp.html">Timestamp</a>, <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html">PortInputError</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a884860a22b1c363d07679652e34854f0">getInputStampedWithDiagnostic</a> (const std::string &amp;key, T &amp;destination) const</td></tr>
+<tr class="memdesc:a884860a22b1c363d07679652e34854f0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Same as getInputStamped(key, destination) but returns a structured <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html" title="Diagnostic error returned by TreeNode::getInputStampedWithDiagnostic().">PortInputError</a> on failure, so callers can distinguish the different reasons a port read can fail (unwired manifest key vs. blackboard key missing vs. conversion failure, etc.). The <code>.message</code> field preserves the exact human-readable text <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a4fd8498410d2344cc9af272ea97dfd09" title="getInputStamped is similar to getInput(dey, destination), but it returns also the Timestamp object,...">getInputStamped()</a> would have returned.  <br /></td></tr>
+<tr class="separator:a884860a22b1c363d07679652e34854f0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a97f9603998b33e7a6609e311d5bbc61b"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a97f9603998b33e7a6609e311d5bbc61b"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d2/d8d/namespace_b_t.html#a7ed468293f4e7dc7ebbaca1a475526f3">Expected</a>&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a97f9603998b33e7a6609e311d5bbc61b">getInput</a> (const std::string &amp;key) const</td></tr>
 <tr class="separator:a97f9603998b33e7a6609e311d5bbc61b"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab7b260cce963ad5b77c6fbb07d5d85b6"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ab7b260cce963ad5b77c6fbb07d5d85b6"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d2/d8d/namespace_b_t.html#a7ed468293f4e7dc7ebbaca1a475526f3">Expected</a>&lt; <a class="el" href="../../d6/dfa/struct_b_t_1_1_stamped_value.html">StampedValue</a>&lt; T &gt; &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#ab7b260cce963ad5b77c6fbb07d5d85b6">getInputStamped</a> (const std::string &amp;key) const</td></tr>
 <tr class="separator:ab7b260cce963ad5b77c6fbb07d5d85b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8e40bc8b31711165532f900fc1a97f21"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a8e40bc8b31711165532f900fc1a97f21"><td class="memTemplItemLeft" align="right" valign="top">nonstd::expected&lt; T, <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html">PortInputError</a> &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a8e40bc8b31711165532f900fc1a97f21">getInputWithDiagnostic</a> (const std::string &amp;key) const</td></tr>
+<tr class="separator:a8e40bc8b31711165532f900fc1a97f21"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a74618849a9199ab568eb451d580e20fc"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a74618849a9199ab568eb451d580e20fc"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="../../d2/d8d/namespace_b_t.html#ad8e3c5c30d6bff91c95a9184fec5a2d5">Result</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a74618849a9199ab568eb451d580e20fc">setOutput</a> (const std::string &amp;key, const T &amp;value)</td></tr>
 <tr class="memdesc:a74618849a9199ab568eb451d580e20fc"><td class="mdescLeft">&#160;</td><td class="mdescRight">setOutput modifies the content of an Output port  <br /></td></tr>
@@ -619,6 +626,89 @@ template&lt;typename T &gt; </div>
   <table class="params">
     <tr><td class="paramname">key</td><td>the name of the port. </td></tr>
     <tr><td class="paramname">destination</td><td>reference to the object where the value should be stored </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a884860a22b1c363d07679652e34854f0" name="a884860a22b1c363d07679652e34854f0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a884860a22b1c363d07679652e34854f0">&#9670;&#160;</a></span>getInputStampedWithDiagnostic()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">nonstd::expected&lt; <a class="el" href="../../d0/d59/struct_b_t_1_1_timestamp.html">Timestamp</a>, <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html">PortInputError</a> &gt; BT::TreeNode::getInputStampedWithDiagnostic </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>key</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">T &amp;&#160;</td>
+          <td class="paramname"><em>destination</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Same as getInputStamped(key, destination) but returns a structured <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html" title="Diagnostic error returned by TreeNode::getInputStampedWithDiagnostic().">PortInputError</a> on failure, so callers can distinguish the different reasons a port read can fail (unwired manifest key vs. blackboard key missing vs. conversion failure, etc.). The <code>.message</code> field preserves the exact human-readable text <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a4fd8498410d2344cc9af272ea97dfd09" title="getInputStamped is similar to getInput(dey, destination), but it returns also the Timestamp object,...">getInputStamped()</a> would have returned. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">key</td><td>the name of the port. </td></tr>
+    <tr><td class="paramname">destination</td><td>reference to the object where the value should be stored </td></tr>
+  </table>
+  </dd>
+</dl>
+
+</div>
+</div>
+<a id="a8e40bc8b31711165532f900fc1a97f21" name="a8e40bc8b31711165532f900fc1a97f21"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8e40bc8b31711165532f900fc1a97f21">&#9670;&#160;</a></span>getInputWithDiagnostic()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">nonstd::expected&lt; T, <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html">PortInputError</a> &gt; BT::TreeNode::getInputWithDiagnostic </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>key</em></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+<p>Value-returning convenience for <a class="el" href="../../da/d61/class_b_t_1_1_tree_node.html#a884860a22b1c363d07679652e34854f0" title="Same as getInputStamped(key, destination) but returns a structured PortInputError on failure,...">getInputStampedWithDiagnostic()</a>.</p>
+<p>Returns the port value directly on success, or a nonstd::expected carrying the structured <a class="el" href="../../d7/d16/struct_b_t_1_1_port_input_error.html" title="Diagnostic error returned by TreeNode::getInputStampedWithDiagnostic().">PortInputError</a> on failure. Use this when you only need the value (not the <a class="el" href="../../d0/d59/struct_b_t_1_1_timestamp.html">Timestamp</a>) but still want to distinguish the failure reasons the diagnostic variant exposes.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">key</td><td>the name of the port. </td></tr>
   </table>
   </dd>
 </dl>
