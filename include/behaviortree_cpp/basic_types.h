@@ -87,6 +87,43 @@ using KeyValueVector = std::vector<std::pair<std::string, std::string>>;
 template <typename T>
 using Expected = nonstd::expected<T, std::string>;
 
+/**
+ * @brief Machine-readable cause for why an input port could not be read.
+ *
+ * The plain string error returned by TreeNode::getInputStamped() is fine for
+ * console messages, but callers that want to react differently to different
+ * failure modes (for example, "the user wired a blackboard key but forgot to
+ * populate it" versus "the port is simply unwired and the behavior should
+ * fall back to its default") cannot tell those cases apart from a string.
+ *
+ * TreeNode::getInputStampedWithDiagnostic() returns this enum alongside the
+ * original human-readable message so upstream code can make that distinction.
+ */
+enum class PortError : uint8_t
+{
+  ManifestMissing,     ///< config().manifest is null and the port has no XML entry.
+  ManifestKeyMissing,  ///< The key is not in the manifest and not in the XML.
+  NoDefaultNoWiring,  ///< The manifest has the key but no default value and the XML did not wire it.
+  BlackboardKeyNotFound,  ///< The port is wired to {foo} but the blackboard has no entry called foo.
+  BlackboardEntryEmpty,  ///< The blackboard entry exists but its value is empty.
+  InvalidBlackboard,     ///< config().blackboard is null.
+  ConversionFailed,      ///< parseString<T>() threw while converting a string to T.
+  CastFailed,            ///< Any::cast<T>() or a vector element cast threw.
+};
+
+/**
+ * @brief Diagnostic error returned by TreeNode::getInputStampedWithDiagnostic().
+ *
+ * `code` carries the machine-readable cause; `message` preserves the same
+ * human-readable text the non-diagnostic getInputStamped() overload would
+ * have returned so existing log output is unchanged.
+ */
+struct PortInputError
+{
+  PortError code;
+  std::string message;
+};
+
 struct AnyTypeAllowed
 {
 };
