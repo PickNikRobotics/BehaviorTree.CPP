@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <functional>
+#include <sstream>
 #include <string_view>
 #include <typeinfo>
 #include <unordered_map>
@@ -246,6 +247,18 @@ constexpr bool IsConvertibleToString()
 
 Expected<std::string> toJsonString(const Any& value);
 
+// Helper trait to check if templated type is a std::vector
+template <typename T>
+struct is_vector : std::false_type
+{
+};
+
+template <typename T, typename A>
+struct is_vector<std::vector<T, A>> : std::true_type
+{
+  using ValueType = T;
+};
+
 /**
  * @brief toStr is the reverse operation of convertFromString.
  *
@@ -255,9 +268,32 @@ Expected<std::string> toJsonString(const Any& value);
 template <typename T>
 [[nodiscard]] std::string toStr(const T& value)
 {
+  auto throw_unspecialized_error = []() {
+    throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
+                            BT::demangle(typeid(T)), "]"));
+  };
+
   if constexpr(IsConvertibleToString<T>())
   {
     return static_cast<std::string>(value);
+  }
+  else if constexpr(is_vector<T>::value)
+  {
+    try
+    {
+      using InnerType = typename is_vector<T>::ValueType;
+      std::stringstream ss;
+      for(auto it = value.begin(); it != --value.end(); ++it)
+      {
+        ss << toStr<InnerType>(*it) << ';';
+      }
+      ss << toStr<InnerType>(value.back());
+      return ss.str();
+    }
+    catch(LogicError&)
+    {
+      throw_unspecialized_error();
+    }
   }
   else if constexpr(!std::is_arithmetic_v<T>)
   {
@@ -266,8 +302,7 @@ template <typename T>
       return *str;
     }
 
-    throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
-                            BT::demangle(typeid(T)), "]"));
+    throw_unspecialized_error();
   }
   else
   {

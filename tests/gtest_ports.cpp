@@ -6,6 +6,13 @@
 
 using namespace BT;
 
+TEST(toStr, ConvertsVectors)
+{
+  std::string val_str;
+  ASSERT_NO_THROW(val_str = BT::toStr(std::vector<int>{ 1, 2, 3, 4 }));
+  EXPECT_EQ(val_str, "1;2;3;4");
+}
+
 class NodeWithPorts : public SyncActionNode
 {
 public:
