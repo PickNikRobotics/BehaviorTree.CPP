@@ -263,6 +263,20 @@ public:
   [[nodiscard]] Expected<Timestamp> getInputStamped(const std::string& key,
                                                     T& destination) const;
 
+  /**
+   * @brief Same as getInputStamped(key, destination) but returns a structured
+   * PortInputError on failure, so callers can distinguish the different reasons
+   * a port read can fail (unwired manifest key vs. blackboard key missing vs.
+   * conversion failure, etc.). The `.message` field preserves the exact
+   * human-readable text getInputStamped() would have returned.
+   *
+   * @param key          the name of the port.
+   * @param destination  reference to the object where the value should be stored
+   */
+  template <typename T>
+  [[nodiscard]] nonstd::expected<Timestamp, PortInputError>
+  getInputStampedWithDiagnostic(const std::string& key, T& destination) const;
+
   /** Same as bool getInput(const std::string& key, T& destination)
    * but using optional.
    *
@@ -294,6 +308,28 @@ public:
     {
       return nonstd::make_unexpected(res.error());
     }
+  }
+
+  /** Value-returning convenience for getInputStampedWithDiagnostic().
+   *
+   * Returns the port value directly on success, or a nonstd::expected carrying
+   * the structured PortInputError on failure. Use this when you only need the
+   * value (not the Timestamp) but still want to distinguish the failure
+   * reasons the diagnostic variant exposes.
+   *
+   * @param key   the name of the port.
+   */
+  template <typename T>
+  [[nodiscard]] nonstd::expected<T, PortInputError>
+  getInputWithDiagnostic(const std::string& key) const
+  {
+    T out{};
+    auto res = getInputStampedWithDiagnostic(key, out);
+    if(res)
+    {
+      return out;
+    }
+    return nonstd::make_unexpected(res.error());
   }
 
   /**
@@ -450,8 +486,8 @@ T TreeNode::parseString(const std::string& str) const
 }
 
 template <typename T>
-inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
-                                                     T& destination) const
+inline nonstd::expected<Timestamp, PortInputError>
+TreeNode::getInputStampedWithDiagnostic(const std::string& key, T& destination) const
 {
   std::string port_value_str;
 
@@ -462,10 +498,11 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
   }
   else if(!config().manifest)
   {
-    return nonstd::make_unexpected(StrCat("getInput() of node '", fullPath(),
-                                          "' failed because the manifest is "
-                                          "nullptr (WTF?) and the key: [",
-                                          key, "] is missing"));
+    return nonstd::make_unexpected(PortInputError{
+        PortError::ManifestMissing, StrCat("getInput() of node '", fullPath(),
+                                           "' failed because the manifest is "
+                                           "nullptr (WTF?) and the key: [",
+                                           key, "] is missing") });
   }
   else
   {
@@ -473,19 +510,21 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
     auto port_manifest_it = config().manifest->ports.find(key);
     if(port_manifest_it == config().manifest->ports.end())
     {
-      return nonstd::make_unexpected(StrCat("getInput() of node '", fullPath(),
-                                            "' failed because the manifest doesn't "
-                                            "contain the key: [",
-                                            key, "]"));
+      return nonstd::make_unexpected(PortInputError{
+          PortError::ManifestKeyMissing, StrCat("getInput() of node '", fullPath(),
+                                                "' failed because the manifest doesn't "
+                                                "contain the key: [",
+                                                key, "]") });
     }
     const auto& port_info = port_manifest_it->second;
     // there is a default value
     if(port_info.defaultValue().empty())
     {
-      return nonstd::make_unexpected(StrCat("getInput() of node '", fullPath(),
-                                            "' failed because nor the manifest or the "
-                                            "XML contain the key: [",
-                                            key, "]"));
+      return nonstd::make_unexpected(PortInputError{
+          PortError::NoDefaultNoWiring, StrCat("getInput() of node '", fullPath(),
+                                               "' failed because nor the manifest or the "
+                                               "XML contain the key: [",
+                                               key, "]") });
     }
     if(port_info.defaultValue().isString())
     {
@@ -510,7 +549,8 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
       }
       catch(std::exception& ex)
       {
-        return nonstd::make_unexpected(StrCat("getInput(): ", ex.what()));
+        return nonstd::make_unexpected(PortInputError{
+            PortError::ConversionFailed, StrCat("getInput(): ", ex.what()) });
       }
       return Timestamp{};
     }
@@ -518,8 +558,11 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
 
     if(!config().blackboard)
     {
-      return nonstd::make_unexpected("getInput(): trying to access "
-                                     "an invalid Blackboard");
+      // clang-format off
+      return nonstd::make_unexpected(PortInputError{
+          PortError::InvalidBlackboard,
+          "getInput(): trying to access an invalid Blackboard" });
+      // clang-format on
     }
 
     if(auto entry = config().blackboard->getEntry(std::string(blackboard_key)))
@@ -549,9 +592,13 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
             if(!any_vec.empty() &&
                any_vec.front().type() != typeid(typename T::value_type))
             {
-              return nonstd::make_unexpected("Invalid cast requested from vector<Any> to "
-                                             "vector<typename T::value_type>."
-                                             " Element type does not align.");
+              return nonstd::make_unexpected(PortInputError{ PortError::CastFailed,
+                                                             "Invalid cast requested "
+                                                             "from vector<Any> to "
+                                                             "vector<typename "
+                                                             "T::value_type>."
+                                                             " Element type does not "
+                                                             "align." });
             }
             destination = T();
             std::transform(
@@ -570,16 +617,41 @@ inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
         }
         return Timestamp{ entry->sequence_id, entry->stamp };
       }
+
+      // The entry exists on the blackboard but its value is empty (for example,
+      // it was created via createEntry() without ever being set).
+      return nonstd::make_unexpected(
+          PortInputError{ PortError::BlackboardEntryEmpty,
+                          StrCat("getInput() failed because it was unable to "
+                                 "find the key [",
+                                 key, "] remapped to [", blackboard_key, "]") });
     }
 
-    return nonstd::make_unexpected(StrCat("getInput() failed because it was unable to "
-                                          "find the key [",
-                                          key, "] remapped to [", blackboard_key, "]"));
+    // No entry on the blackboard at all: the port was wired to a key that was
+    // never populated. This is the case that callers most often want to surface
+    // as a warning, because it usually indicates a wiring mistake by the user.
+    return nonstd::make_unexpected(
+        PortInputError{ PortError::BlackboardKeyNotFound,
+                        StrCat("getInput() failed because it was unable to "
+                               "find the key [",
+                               key, "] remapped to [", blackboard_key, "]") });
   }
   catch(std::exception& err)
   {
-    return nonstd::make_unexpected(err.what());
+    return nonstd::make_unexpected(PortInputError{ PortError::CastFailed, err.what() });
   }
+}
+
+template <typename T>
+inline Expected<Timestamp> TreeNode::getInputStamped(const std::string& key,
+                                                     T& destination) const
+{
+  auto res = getInputStampedWithDiagnostic<T>(key, destination);
+  if(res)
+  {
+    return res.value();
+  }
+  return nonstd::make_unexpected(std::move(res.error().message));
 }
 
 template <typename T>

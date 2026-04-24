@@ -871,3 +871,272 @@ TEST(PortTest, WhitespaceInPortName)
   ASSERT_ANY_THROW(BT::InputPort<std::string>("trailing "));
   ASSERT_NO_THROW(BT::InputPort<std::string>("valid_port_name"));
 }
+
+// ----------------------------------------------------------------------------
+// Diagnostic-aware input port reads.
+//
+// getInputStampedWithDiagnostic() returns a structured PortInputError alongside
+// the human-readable message so callers can tell unwired ports apart from
+// blackboard wiring that was never populated (the latter is a likely user bug
+// that should be surfaced).
+// ----------------------------------------------------------------------------
+
+class DiagnosticPortNode : public SyncActionNode
+{
+public:
+  DiagnosticPortNode(const std::string& name, const NodeConfig& config)
+    : SyncActionNode(name, config)
+  {}
+
+  NodeStatus tick() override
+  {
+    return NodeStatus::SUCCESS;
+  }
+
+  static PortsList providedPorts()
+  {
+    // Two input ports: one with no default ("required" from the manifest's
+    // perspective) and one with a default of 7.
+    return { BT::InputPort<int>("no_default"),
+             BT::InputPort<int>("with_default", 7, "default seven") };
+  }
+};
+
+TEST(PortTest, DiagnosticBlackboardKeyNotFound)
+{
+  // Port is wired to {missing_key}, but the blackboard has no such entry.
+  // This is the bug case the diagnostic enum exists to surface.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{missing_key}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::BlackboardKeyNotFound);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticBlackboardEntryEmpty)
+{
+  // The blackboard key exists, but its entry is empty (created without a value).
+  auto bb = Blackboard::create();
+  bb->createEntry("empty_key", TypeInfo::Create<int>());
+
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{empty_key}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::BlackboardEntryEmpty);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticManifestKeyMissing)
+{
+  // Ask for a key that is not in the XML and not in the manifest.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("totally_unknown", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::ManifestKeyMissing);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticNoDefaultNoWiring)
+{
+  // The manifest has the key but the default is empty AND nothing wired it.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::NoDefaultNoWiring);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticManifestMissing)
+{
+  // The node has no manifest attached and no input_ports entry for the key.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  config.manifest = nullptr;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::ManifestMissing);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticConversionFailed)
+{
+  // A literal (non-blackboard) value that cannot be parsed as int.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "not_an_int";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::ConversionFailed);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticInvalidBlackboard)
+{
+  // Port is wired to {foo} but no blackboard is attached.
+  NodeConfig config;
+  config.blackboard = nullptr;
+  config.input_ports["no_default"] = "{foo}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::InvalidBlackboard);
+  EXPECT_FALSE(res.error().message.empty());
+}
+
+TEST(PortTest, DiagnosticSuccessFromBlackboard)
+{
+  // Happy path: blackboard has the entry, returns the value, no error.
+  auto bb = Blackboard::create();
+  bb->set("my_value", 42);
+
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{my_value}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("no_default", value);
+  ASSERT_TRUE(res.has_value()) << (res ? "" : res.error().message);
+  EXPECT_EQ(value, 42);
+}
+
+TEST(PortTest, DiagnosticSuccessFromDefault)
+{
+  // Happy path: nothing wired, manifest default fires.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStampedWithDiagnostic<int>("with_default", value);
+  ASSERT_TRUE(res.has_value()) << (res ? "" : res.error().message);
+  EXPECT_EQ(value, 7);
+}
+
+TEST(PortTest, GetInputStampedDelegatesToDiagnosticMessage)
+{
+  // The original getInputStamped() must keep its existing message-on-failure
+  // contract so callers that relied on the string still work.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{missing_key}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  int value = 0;
+  auto res = node.getInputStamped<int>("no_default", value);
+  ASSERT_FALSE(res.has_value());
+  EXPECT_FALSE(res.error().empty());
+}
+
+TEST(PortTest, GetInputWithDiagnosticReturnsValueOnSuccess)
+{
+  // Happy path: getInputWithDiagnostic<T>(key) should return the port value
+  // directly, without the caller having to stage a destination variable.
+  auto bb = Blackboard::create();
+  bb->set("my_value", 42);
+
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{my_value}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  auto res = node.getInputWithDiagnostic<int>("no_default");
+  ASSERT_TRUE(res.has_value()) << (res ? "" : res.error().message);
+  EXPECT_EQ(*res, 42);
+}
+
+TEST(PortTest, GetInputWithDiagnosticPropagatesBlackboardKeyNotFound)
+{
+  // Failure path: getInputWithDiagnostic<T>(key) should surface the same
+  // structured PortInputError the stamped variant produces. This is the
+  // error code MoveIt Pro's getOptionalInputs() relies on to distinguish a
+  // wiring bug from a legitimate "no value" optional port.
+  auto bb = Blackboard::create();
+  NodeConfig config;
+  config.blackboard = bb;
+  config.input_ports["no_default"] = "{missing_key}";
+  TreeNodeManifest manifest;
+  manifest.ports = DiagnosticPortNode::providedPorts();
+  config.manifest = &manifest;
+
+  DiagnosticPortNode node("diag", config);
+
+  auto res = node.getInputWithDiagnostic<int>("no_default");
+  ASSERT_FALSE(res.has_value());
+  EXPECT_EQ(res.error().code, PortError::BlackboardKeyNotFound);
+  EXPECT_FALSE(res.error().message.empty());
+}
