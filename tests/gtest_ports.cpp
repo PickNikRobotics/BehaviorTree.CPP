@@ -6,11 +6,26 @@
 
 using namespace BT;
 
-TEST(toStr, ConvertsVectors)
+TEST(toStr, ConvertsIntVector)
 {
   std::string val_str;
-  ASSERT_NO_THROW(val_str = BT::toStr(std::vector<int>{ 1, 2, 3, 4 }));
+  ASSERT_NO_THROW(val_str = toStr(std::vector<int>{ 1, 2, 3, 4 }));
   EXPECT_EQ(val_str, "1;2;3;4");
+}
+
+TEST(toStr, ConvertsStringVector)
+{
+  std::string val_str;
+  ASSERT_NO_THROW(val_str =
+                      toStr(std::vector<std::string>{ "hello", "", " ", "world", "!" }));
+  EXPECT_EQ(val_str, "hello;; ;world;!");
+}
+
+TEST(toStr, ConvertsEmptyVector)
+{
+  std::string val_str;
+  ASSERT_NO_THROW(val_str = toStr(std::vector<std::string>{}));
+  EXPECT_EQ(val_str, "");
 }
 
 class NodeWithPorts : public SyncActionNode

@@ -320,6 +320,10 @@ template <typename T>
   {
     try
     {
+      if(value.empty())
+      {
+        return "";
+      }
       using InnerType = typename is_vector<T>::ValueType;
       std::stringstream ss;
       for(auto it = value.begin(); it != --value.end(); ++it)
