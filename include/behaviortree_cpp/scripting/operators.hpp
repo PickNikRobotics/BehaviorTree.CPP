@@ -213,7 +213,11 @@ struct ExprBinaryArithmetic : ExprBase
       throw RuntimeError(ErrorNotInit("right", opStr()));
     }
 
-    if(rhs_v.isNumber() && lhs_v.isNumber())
+    // If just one value is strongly typed as a number, and the other can be casted to one, do arithmetic. If both are not strongly typed, continue. In the case of `+`, non-strongly typed values will result in concatenation.
+    bool are_numbers = (rhs_v.isNumber() && lhs_v.isNumber()) ||
+                       ((rhs_v.tryCast<double>().has_value() && lhs_v.isNumber()) !=
+                        (rhs_v.isNumber() && lhs_v.tryCast<double>().has_value()));
+    if(are_numbers)
     {
       auto lv = lhs_v.cast<double>();
       auto rv = rhs_v.cast<double>();
