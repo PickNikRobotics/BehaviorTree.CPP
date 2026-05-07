@@ -558,9 +558,9 @@ TEST(BlackboardTest, BlackboardBackup)
   for(const auto& sub : tree.subtrees)
   {
     std::vector<std::string> keys;
-    for(const auto& str_view : sub->blackboard->getKeys())
+    for(const std::string& str : sub->blackboard->getKeys())
     {
-      keys.push_back(std::string(str_view));
+      keys.push_back(str);
     }
     expected_keys.push_back(keys);
   }
