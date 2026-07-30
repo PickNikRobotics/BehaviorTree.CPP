@@ -1,5 +1,12 @@
 #pragma once
 
+// Marks these headers as the PickNik fork (behaviortree_cpp_picknik). Stock
+// upstream behaviortree_cpp coexists in the same image for nav2, and its
+// unscoped headers could win include resolution in a misconfigured build —
+// compiling fork consumers against the wrong ABI. Downstream code that
+// requires the fork checks this macro and fails the compile loudly instead.
+#define BTCPP_PICKNIK_FORK 1
+
 #include <algorithm>
 #include <cctype>
 #include <chrono>
