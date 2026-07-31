@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16.3) # version on Ubuntu Focal
 
-project(behaviortree_cpp VERSION 4.7.2 LANGUAGES C CXX)
+project(behaviortree_cpp_picknik VERSION 4.7.2 LANGUAGES C CXX)
 
 # create compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -188,7 +188,7 @@ target_link_libraries(${BTCPP_LIBRARY}
 target_include_directories(${BTCPP_LIBRARY}
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:${BTCPP_INCLUDE_DESTINATION}>
     PRIVATE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/lexy/include>
@@ -211,6 +211,15 @@ else()
 endif()
 
 add_library(BT::${BTCPP_LIBRARY} ALIAS ${BTCPP_LIBRARY})
+
+# A versioned soname (libbehaviortree_cpp_picknik.so.<major>.<minor>) makes a
+# binary built against one ABI fail loudly at load time instead of silently
+# binding to an incompatible library. Upstream ships an unversioned soname,
+# which is what made the nav2 ABI mismatch in moveit_pro#20928 silently
+# reachable. Minor-version bumps of this fork are treated as ABI breaks.
+set_target_properties(${BTCPP_LIBRARY} PROPERTIES
+    VERSION ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
 
 # Add fuzzing targets
 if(ENABLE_FUZZING)

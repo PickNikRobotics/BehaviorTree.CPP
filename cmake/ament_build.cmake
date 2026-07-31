@@ -24,7 +24,11 @@ set( BTCPP_EXTRA_LIBRARIES
 ament_export_dependencies(ament_index_cpp)
 
 set( BTCPP_LIB_DESTINATION     lib )
-set( BTCPP_INCLUDE_DESTINATION include )
+# Headers install under a package-scoped root so this fork can coexist with
+# upstream behaviortree_cpp on the same system (moveit_pro#20928). The exported
+# include dir below points consumers at the scoped root, so source code keeps
+# using #include "behaviortree_cpp/..." unchanged.
+set( BTCPP_INCLUDE_DESTINATION include/${PROJECT_NAME} )
 set( BTCPP_BIN_DESTINATION     bin )
 
 mark_as_advanced(
@@ -35,7 +39,7 @@ mark_as_advanced(
     BTCPP_BIN_DESTINATION )
 
 macro(export_btcpp_package)
-    ament_export_include_directories(include)
+    ament_export_include_directories(${BTCPP_INCLUDE_DESTINATION})
     ament_export_libraries(${BTCPP_LIBRARY})
     ament_export_targets(${BTCPP_LIBRARY}Targets)
     ament_package()
