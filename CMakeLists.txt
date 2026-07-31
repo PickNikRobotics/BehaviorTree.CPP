@@ -92,7 +92,38 @@ endif()
 #############################################################
 # LIBRARY
 
+# lexy is linked PRIVATE/BUILD_INTERFACE-only (see the target_link_libraries
+# calls below) and its only consumer, src/script_parser.cpp, is compiled into
+# this library itself. No header reachable from the public entry points
+# (behavior_tree.h / bt_factory.h / basic_types.h) includes lexy; the
+# scripting/operators.hpp -> any_types.hpp chain does, but it is parser-internal
+# and consumed only by src/script_parser.cpp. So installing lexy's own
+# headers/CMake config/static lib is dead weight that would otherwise collide
+# with any stock behaviortree_cpp snapshot that also vendors lexy unscoped
+# (issue #20928). Disable lexy's own install rule before pulling it in.
+#
+# CACHE ... FORCE is configure-wide, not scoped to this add_subdirectory() call:
+# if this project is itself embedded via add_subdirectory() alongside another,
+# unrelated lexy instance, forcing this cache entry OFF would also suppress
+# that instance's install rules for the rest of the configure run. Save the
+# caller's prior cache state (absent or a value) and restore it once lexy's own
+# option(LEXY_ENABLE_INSTALL ...) has read our forced OFF -- restoring after
+# add_subdirectory() returns is safe because that option() call, not any later
+# read, is what CMP0077-OLD in 3rdparty/lexy/CMakeLists.txt makes CACHE FORCE
+# necessary for in the first place.
+if(DEFINED CACHE{LEXY_ENABLE_INSTALL})
+    set(_btcpp_picknik_prev_lexy_enable_install "${LEXY_ENABLE_INSTALL}")
+else()
+    unset(_btcpp_picknik_prev_lexy_enable_install)
+endif()
+set(LEXY_ENABLE_INSTALL OFF CACHE BOOL "Disabled by behaviortree_cpp_picknik, see comment above" FORCE)
 add_subdirectory(3rdparty/lexy)
+if(DEFINED _btcpp_picknik_prev_lexy_enable_install)
+    set(LEXY_ENABLE_INSTALL "${_btcpp_picknik_prev_lexy_enable_install}" CACHE BOOL "Disabled by behaviortree_cpp_picknik, see comment above" FORCE)
+    unset(_btcpp_picknik_prev_lexy_enable_install)
+else()
+    unset(LEXY_ENABLE_INSTALL CACHE)
+endif()
 
 add_library(minitrace STATIC 3rdparty/minitrace/minitrace.cpp)
 target_compile_definitions(minitrace PRIVATE MTR_ENABLED=True)
