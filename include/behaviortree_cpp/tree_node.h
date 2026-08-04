@@ -130,6 +130,13 @@ struct NodeConfig
 
   std::map<PreCond, std::string> pre_conditions;
   std::map<PostCond, std::string> post_conditions;
+
+  // ABI: new members MUST be appended here, at the end of the struct.
+  // getInput<T>() is header-inlined into callers and dereferences config().manifest;
+  // inserting a member mid-struct shifts every following offset and makes binaries
+  // built against stock headers read garbage (see moveit_pro#20928).
+  // If missing port fields are automatically remapped (only relevant for subtrees).
+  bool auto_remapped = false;
 };
 
 // back compatibility
@@ -152,7 +159,8 @@ inline constexpr bool hasNodeFullCtor()
 class TreeNode
 {
 public:
-  typedef std::shared_ptr<TreeNode> Ptr;
+  using Ptr = std::shared_ptr<TreeNode>;
+  using ConstPtr = std::shared_ptr<const TreeNode>;
 
   /**
      * @brief TreeNode main constructor.

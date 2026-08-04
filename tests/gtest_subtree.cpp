@@ -8,6 +8,7 @@
 
 #include "../sample_nodes/dummy_nodes.h"
 #include "../sample_nodes/movebase_node.h"
+#include "behaviortree_cpp/exceptions.h"
 
 using namespace BT;
 
@@ -591,6 +592,11 @@ public:
 private:
   virtual BT::NodeStatus tick() override
   {
+    const auto& condition = getInput<bool>("condition");
+    if(!condition.has_value())
+    {
+      throw RuntimeError("Missing input port 'condition'.");
+    }
     if(getInput<bool>("condition").value())
       return BT::NodeStatus::SUCCESS;
     else
@@ -661,6 +667,22 @@ TEST(SubTree, SubtreeModels)
 
   BehaviorTreeFactory factory;
   auto tree = factory.createTreeFromText(xml_text);
+
+  const TreeNode* subtreeNode = nullptr;
+  tree.applyVisitor([&subtreeNode](const TreeNode* node) {
+    if(node->name() == "MySub")
+    {
+      subtreeNode = node;
+    }
+  });
+
+  ASSERT_NE(subtreeNode, nullptr);
+  const auto& in_ports = subtreeNode->config().input_ports;
+  const auto& out_ports = subtreeNode->config().output_ports;
+  ASSERT_EQ(in_ports.count("in_name"), 1u);
+  EXPECT_EQ(in_ports.at("in_name"), "{my_name}");
+  ASSERT_EQ(out_ports.count("out_state"), 1u);
+  EXPECT_EQ(out_ports.at("out_state"), "{my_state}");
   tree.tickWhileRunning();
 }
 
