@@ -28,17 +28,6 @@ struct StampedValue
   Timestamp stamp;
 };
 
-// Helper trait to check if templated type is a std::vector
-template <typename T>
-struct is_vector : std::false_type
-{
-};
-
-template <typename T, typename A>
-struct is_vector<std::vector<T, A>> : std::true_type
-{
-};
-
 // Helper function to check if a demangled type string is a std::vector<..>.
 // MSVC has no demangler, so demangle() returns typeid().name() verbatim and the
 // name carries an elaborated-type prefix: "class std::vector<double,...>" where
