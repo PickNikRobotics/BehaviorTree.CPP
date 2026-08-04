@@ -7,6 +7,7 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <typeinfo>
 #include <unordered_map>
@@ -283,6 +284,18 @@ constexpr bool IsConvertibleToString()
 
 Expected<std::string> toJsonString(const Any& value);
 
+// Helper trait to check if templated type is a std::vector
+template <typename T>
+struct is_vector : std::false_type
+{
+};
+
+template <typename T, typename A>
+struct is_vector<std::vector<T, A>> : std::true_type
+{
+  using ValueType = T;
+};
+
 /**
  * @brief toStr is the reverse operation of convertFromString.
  *
@@ -295,6 +308,29 @@ template <typename T>
   if constexpr(IsConvertibleToString<T>())
   {
     return static_cast<std::string>(value);
+  }
+  else if constexpr(is_vector<T>::value)
+  {
+    try
+    {
+      if(value.empty())
+      {
+        return "";
+      }
+      using InnerType = typename is_vector<T>::ValueType;
+      std::stringstream ss;
+      for(auto it = value.begin(); it != --value.end(); ++it)
+      {
+        ss << toStr<InnerType>(*it) << ';';
+      }
+      ss << toStr<InnerType>(value.back());
+      return ss.str();
+    }
+    catch(LogicError&)
+    {
+      throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
+                              BT::demangle(typeid(T)), "]"));
+    }
   }
   else if constexpr(!std::is_arithmetic_v<T>)
   {
