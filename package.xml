@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>behaviortree_cpp</name>
+  <name>behaviortree_cpp_picknik</name>
   <version>4.9.0</version>
   <description>
   This package provides the Behavior Trees core library.

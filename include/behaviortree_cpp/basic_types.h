@@ -1,5 +1,12 @@
 #pragma once
 
+// Marks these headers as the PickNik fork (behaviortree_cpp_picknik) rather than
+// stock upstream BehaviorTree.CPP. moveit_pro_behavior_interface's
+// btcpp_fork_guard.hpp #errors when this is absent, so any Behavior translation
+// unit that resolves BT includes to stock headers fails loudly at compile time
+// (moveit_pro#20928, mechanism 4).
+#define BTCPP_PICKNIK_FORK 1
+
 #include "behaviortree_cpp/contrib/expected.hpp"
 #include "behaviortree_cpp/exceptions.h"
 #include "behaviortree_cpp/utils/safe_any.hpp"
