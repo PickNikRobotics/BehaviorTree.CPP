@@ -95,6 +95,25 @@ public:
             const auto& vec = vec_result.value();
             current_queue_ = std::make_shared<std::deque<T>>(vec.begin(), vec.end());
           }
+          else if(auto any_vec_result = any_ref.get()->tryCast<std::vector<BT::Any>>())
+          {
+            // Fork divergence: setOutput<std::vector<T>>() stores vectors as
+            // std::vector<BT::Any>, so neither of the casts above matches. Unwrap
+            // each element back to T.
+            auto queue = std::make_shared<std::deque<T>>();
+            for(const auto& element : any_vec_result.value())
+            {
+              auto element_result = element.tryCast<T>();
+              if(!element_result)
+              {
+                throw RuntimeError("LoopNode: port 'queue' holds a vector<Any> whose "
+                                   "element cannot be cast to the loop type: ",
+                                   element_result.error());
+              }
+              queue->push_back(element_result.value());
+            }
+            current_queue_ = std::move(queue);
+          }
           else if(any_ref.get()->isString())
           {
             // Accept string values (e.g. from subtree remapping). Issue #1065.
