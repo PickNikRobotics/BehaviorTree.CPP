@@ -172,7 +172,10 @@ TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_root_lowercase)
   EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
 }
 
-TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithSpace)
+// Fork divergence: upstream rejects spaces in model names; this fork permits
+// them because MoveIt Pro names every Objective in human-readable form
+// ("Close Gripper", "Move to Pose"). See validateModelName in xml_parsing.cpp.
+TEST_F(NameValidationXMLTest, BehaviorTreeID_WithSpace_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4">
@@ -180,10 +183,11 @@ TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithSpace)
         <AlwaysSuccess/>
       </BehaviorTree>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithPeriod)
+// Fork divergence: see BehaviorTreeID_WithDot_IsAcceptedByFork below.
+TEST_F(NameValidationXMLTest, BehaviorTreeID_WithPeriod_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4">
@@ -191,7 +195,7 @@ TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithPeriod)
         <AlwaysSuccess/>
       </BehaviorTree>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
 }
 
 TEST_F(NameValidationXMLTest, ValidInstanceName)
@@ -243,7 +247,8 @@ TEST_F(NameValidationXMLTest, ValidSubTreeID)
   EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, InvalidSubTreeID_WithSpace)
+// Fork divergence: see BehaviorTreeID_WithSpace_IsAcceptedByFork above.
+TEST_F(NameValidationXMLTest, SubTreeID_WithSpace_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4" main_tree_to_execute="MainTree">
@@ -254,7 +259,56 @@ TEST_F(NameValidationXMLTest, InvalidSubTreeID_WithSpace)
         <AlwaysSuccess/>
       </BehaviorTree>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
+}
+
+// The space, the apostrophe and the dot are the ONLY relaxations. Every other
+// forbidden character must still throw -- these are what the validation exists for.
+// Fork divergence: MoveIt Pro puts no validation on Objective names, and its
+// REST suite pins a name with an apostrophe. An apostrophe needs no escaping in
+// the double-quoted attribute value BT.CPP writes.
+// Fork divergence: a customer workspace names an Objective `Test Presoak 1.2`.
+// Version-suffixed names are natural and '.' is not structural in a model name.
+TEST_F(NameValidationXMLTest, BehaviorTreeID_WithDot_IsAcceptedByFork)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="Test Presoak 1.2">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+    </root>)";
+  EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
+}
+
+TEST_F(NameValidationXMLTest, BehaviorTreeID_WithApostrophe_IsAcceptedByFork)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="Robot's Home">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+    </root>)";
+  EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
+}
+
+TEST_F(NameValidationXMLTest, ForkStillRejectsOtherForbiddenCharsInModelName)
+{
+  // The trailing group puts the offender AFTER a carved-out character.
+  // findForbiddenChar returns only the first offender, so a naive filter on its
+  // result would accept every one of these.
+  for(const char* bad_id :
+      { "Main/Tree", "Main\\Tree", "Main:Tree", "Main*Tree", "Main?Tree", "Main|Tree",
+        "Pick & Place", "Robot's Home/Left", "Robot's <Home>", "A B\\C",
+        "Presoak 1.2|beta", "v1.2:final" })
+  {
+    const std::string xml = std::string(R"(<root BTCPP_format="4">
+      <BehaviorTree ID=")") +
+                            bad_id + R"(">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+    </root>)";
+    EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError) << bad_id;
+  }
 }
 
 // ============== Tests for Unicode support ==============

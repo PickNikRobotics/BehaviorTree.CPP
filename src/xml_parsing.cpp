@@ -12,6 +12,7 @@
 
 #include "behaviortree_cpp/basic_types.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <functional>
@@ -119,7 +120,48 @@ void validateModelName(const std::string& name, int line_number)
     throw RuntimeError("Error at line ", line_str,
                        ": 'Root' is a reserved name and cannot be used as a node type");
   }
-  if(char c = findForbiddenChar(name); c != '\0')
+  // Fork divergence: spaces, apostrophes and dots are permitted in model names.
+  //
+  // Upstream 4.9.0 rejects all three here, but MoveIt Pro names every Objective
+  // and SubTree in human-readable form, and puts no validation of its own on
+  // those names, so whatever an operator types becomes a model name. 4.7.2 did
+  // not validate model names at all, so anything already saved loads today.
+  // Enforcing the upstream rule would refuse configs that work now:
+  //   ' '   1926 IDs across 334 files in moveit_pro and moveit_pro_example_ws,
+  //         276 distinct, including `Close Gripper` and `Move to Pose`.
+  //   '\''  pinned by MoveIt Pro's REST suite as `Robot's Home`, on the grounds
+  //         that supported names are XML attribute values rather than
+  //         interpolated XPath expressions.
+  //   '.'   found in a customer workspace as `Test Presoak 1.2`. Version-suffixed
+  //         names are natural and renaming them is a migration we would be
+  //         imposing for no benefit we can point at.
+  //
+  // None of the three breaks what this validation exists for. All survive a
+  // filesystem round-trip, an apostrophe needs no escaping inside the
+  // double-quoted attribute value BT.CPP writes, and a dot is not structural
+  // here: node paths are built from '/' and "::" (see createNodeFromXML and the
+  // subtree_path construction below), and the '.' handling in
+  // script_tokenizer.cpp applies to script source, which model names never
+  // enter. Port names are a separate namespace and still reject '.' through
+  // IsAllowedPortName.
+  //
+  // The characters that do break serialization are still rejected, '<' '>' '&'
+  // '"', as are '/' '\\' ':' '*' '?' '|', which collide with the path syntax
+  // above or with filesystem round-tripping. Upstream already permits all three
+  // carved-out characters in instance names for the same human-readability
+  // reason (see validateInstanceName below), so this narrows the model/instance
+  // gap rather than inventing a new rule.
+  //
+  // findForbiddenChar returns the FIRST offender, so it cannot be filtered by
+  // comparing its result: a name whose first offender is carved out would hide
+  // every later one, and "Pick & Place" would pass on the space while its '&'
+  // went unseen. Drop the carved-out characters first, then scan what is left.
+  std::string scanned(name);
+  scanned.erase(
+      std::remove_if(scanned.begin(), scanned.end(),
+                     [](char ch) { return ch == ' ' || ch == '\'' || ch == '.'; }),
+      scanned.end());
+  if(char c = findForbiddenChar(scanned); c != '\0')
   {
     throw RuntimeError("Error at line ", line_str, ": Model name '", name,
                        "' contains forbidden character ", formatForbiddenChar(c));
