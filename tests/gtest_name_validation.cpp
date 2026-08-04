@@ -172,7 +172,10 @@ TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_root_lowercase)
   EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
 }
 
-TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithSpace)
+// Fork divergence: upstream rejects spaces in model names; this fork permits
+// them because MoveIt Pro names every Objective in human-readable form
+// ("Close Gripper", "Move to Pose"). See validateModelName in xml_parsing.cpp.
+TEST_F(NameValidationXMLTest, BehaviorTreeID_WithSpace_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4">
@@ -180,7 +183,7 @@ TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithSpace)
         <AlwaysSuccess/>
       </BehaviorTree>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
 TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_WithPeriod)
@@ -243,7 +246,8 @@ TEST_F(NameValidationXMLTest, ValidSubTreeID)
   EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, InvalidSubTreeID_WithSpace)
+// Fork divergence: see BehaviorTreeID_WithSpace_IsAcceptedByFork above.
+TEST_F(NameValidationXMLTest, SubTreeID_WithSpace_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4" main_tree_to_execute="MainTree">
@@ -254,7 +258,23 @@ TEST_F(NameValidationXMLTest, InvalidSubTreeID_WithSpace)
         <AlwaysSuccess/>
       </BehaviorTree>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
+}
+
+// The space is the ONLY relaxation. Every other forbidden character must still
+// throw -- these are what the validation exists for.
+TEST_F(NameValidationXMLTest, ForkStillRejectsOtherForbiddenCharsInModelName)
+{
+  for(const char* bad_id : { "Main/Tree", "Main\\Tree", "Main:Tree", "Main*Tree",
+                             "Main?Tree", "Main|Tree", "Main.Tree" })
+  {
+    const std::string xml = std::string(R"(<root BTCPP_format="4">
+      <BehaviorTree ID=")") + bad_id + R"(">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+    </root>)";
+    EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError) << bad_id;
+  }
 }
 
 // ============== Tests for Unicode support ==============

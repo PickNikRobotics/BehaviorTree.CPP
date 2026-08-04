@@ -119,7 +119,22 @@ void validateModelName(const std::string& name, int line_number)
     throw RuntimeError("Error at line ", line_str,
                        ": 'Root' is a reserved name and cannot be used as a node type");
   }
-  if(char c = findForbiddenChar(name); c != '\0')
+  // Fork divergence: spaces are permitted in model names.
+  //
+  // Upstream 4.9.0 rejects ' ' here, but MoveIt Pro names every Objective and
+  // SubTree in human-readable form -- "Close Gripper", "Move to Pose". A sweep of
+  // moveit_pro + moveit_pro_example_ws found 1926 such IDs across 334 files (276
+  // distinct names), and customer configs in the field follow the same convention,
+  // so enforcing the upstream rule would fail to load essentially every existing
+  // Objective. The space is the ONLY forbidden character any of them use.
+  //
+  // Every other forbidden character is still rejected, including the ones this
+  // validation exists for: '<' '>' '&' '"' '\'' break XML serialization, and
+  // '/' '\\' ':' '*' '?' '|' break filesystem round-tripping. Upstream already
+  // permits spaces in instance names for the same human-readability reason (see
+  // validateInstanceName below), so this narrows the model/instance gap rather
+  // than inventing a new rule.
+  if(char c = findForbiddenChar(name); c != '\0' && c != ' ')
   {
     throw RuntimeError("Error at line ", line_str, ": Model name '", name,
                        "' contains forbidden character ", formatForbiddenChar(c));
