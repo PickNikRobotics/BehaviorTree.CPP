@@ -66,8 +66,8 @@ if(ament_cmake_FOUND)
 
     find_package(ament_cmake_gtest REQUIRED)
 
-    ament_add_gtest(behaviortree_cpp_test ${BT_TESTS})
-    target_link_libraries(behaviortree_cpp_test ${ament_LIBRARIES})
+    ament_add_gtest(${BTCPP_LIBRARY}_test ${BT_TESTS})
+    target_link_libraries(${BTCPP_LIBRARY}_test ${ament_LIBRARIES})
 
 else()
 
@@ -76,31 +76,31 @@ else()
     find_package(GTest REQUIRED)
     include(GoogleTest)
 
-    add_executable(behaviortree_cpp_test ${BT_TESTS})
+    add_executable(${BTCPP_LIBRARY}_test ${BT_TESTS})
 
-    target_link_libraries(behaviortree_cpp_test
+    target_link_libraries(${BTCPP_LIBRARY}_test
         GTest::gtest
         GTest::gtest_main)
 
     # gtest_discover_tests queries the test executable for available tests and registers them on ctest individually
     # On Windows it needs a little help to find the shared libraries
     if(WIN32)
-        gtest_discover_tests(behaviortree_cpp_test
+        gtest_discover_tests(${BTCPP_LIBRARY}_test
             DISCOVERY_MODE PRE_TEST
-            DISCOVERY_ENVIRONMENT "PATH=$<TARGET_FILE_DIR:behaviortree_cpp_test>;$ENV{PATH}"
+            DISCOVERY_ENVIRONMENT "PATH=$<TARGET_FILE_DIR:${BTCPP_LIBRARY}_test>;$ENV{PATH}"
         )
     else()
-        gtest_discover_tests(behaviortree_cpp_test)
+        gtest_discover_tests(${BTCPP_LIBRARY}_test)
     endif()
 
 endif()
 
-target_include_directories(behaviortree_cpp_test PRIVATE include)
-target_link_libraries(behaviortree_cpp_test ${BTCPP_LIBRARY} bt_sample_nodes)
-target_compile_definitions(behaviortree_cpp_test PRIVATE BT_TEST_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}")
+target_include_directories(${BTCPP_LIBRARY}_test PRIVATE include)
+target_link_libraries(${BTCPP_LIBRARY}_test ${BTCPP_LIBRARY} bt_sample_nodes)
+target_compile_definitions(${BTCPP_LIBRARY}_test PRIVATE BT_TEST_FOLDER="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Ensure plugin is built before tests run, and tests can find it
-add_dependencies(behaviortree_cpp_test plugin_issue953)
-target_compile_definitions(behaviortree_cpp_test PRIVATE
+add_dependencies(${BTCPP_LIBRARY}_test plugin_issue953)
+target_compile_definitions(${BTCPP_LIBRARY}_test PRIVATE
   BT_PLUGIN_ISSUE953_PATH="$<TARGET_FILE:plugin_issue953>"
 )

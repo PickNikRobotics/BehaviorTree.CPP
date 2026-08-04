@@ -22,14 +22,12 @@ class BehaviortreeCppConan(ConanFile):
         self.requires("sqlite3/3.40.1")
         self.requires("tinyxml2/10.0.0")
         self.requires("cppzmq/4.11.0")
-        self.requires("foonathan-lexy/2022.12.1")
 
     def generate(self):
         tc = CMakeToolchain(self)
 
         tc.cache_variables["USE_VENDORED_CPPZMQ"] = False
         tc.cache_variables["USE_VENDORED_FLATBUFFERS"] = False
-        tc.cache_variables["USE_VENDORED_LEXY"] = False
         tc.cache_variables["USE_VENDORED_MINICORO"] = False
         tc.cache_variables["USE_VENDORED_MINITRACE"] = False
         tc.cache_variables["USE_VENDORED_TINYXML2"] = False
