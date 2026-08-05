@@ -7,16 +7,20 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "win-64"]
 
 [target.win-64.tasks]
-test = "PATH=\"$PATH;build/Release\" build/tests/Release/behaviortree_cpp_test.exe"
+# The GitHub windows-latest image ships only Visual Studio 2026. CMake's default
+# generator choice is a hardcoded list, so it has to be told about VS 18
+# explicitly -- and the generator itself only exists in cmake >= 4.2.
+build = "mkdir -p build && cd build && cmake ../ -G \"Visual Studio 18 2026\" -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel --config Release"
+test = "PATH=\"$PATH;build/Release\" build/tests/Release/behaviortree_cpp_picknik_test.exe"
 
 [target.linux-64.tasks]
-test = "./build/tests/behaviortree_cpp_test"
+test = "./build/tests/behaviortree_cpp_picknik_test"
 
 [tasks]
 build = "mkdir -p build && cd build && cmake ../ -DCMAKE_BUILD_TYPE=Release && cmake --build . --parallel --config Release"
 
 [dependencies]
-cmake = ">=3.16.3"
+cmake = ">=4.2"  # first version with the "Visual Studio 18 2026" generator
 gmock = "1.14.*"
 sqlite = "3.40.*"
 zeromq = "4.3.*"

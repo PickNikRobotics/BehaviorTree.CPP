@@ -39,7 +39,14 @@ jobs:
 
     - name: Install conan dependencies
       working-directory: ${{github.workspace}}/build
-      run: conan install ${{github.workspace}}/conanfile.txt -s build_type=${{env.BUILD_TYPE}} --build=missing
+      # encryption=tweetnacl swaps zeromq's default libsodium dependency for the
+      # copy bundled in libzmq. CURVE support is unchanged; what goes away is the
+      # only conan package in this graph built by msbuild instead of cmake.
+      # libsodium's hand-written .vcxproj gets PlatformToolset v145 from
+      # compiler.version=195 while vcvars lands on VCToolsVersion 14.44, and
+      # msbuild rejects the pair (MSB8052). Every cmake-built dependency is fine
+      # with the Visual Studio 18 2026 generator.
+      run: conan install ${{github.workspace}}/conanfile.txt -s build_type=${{env.BUILD_TYPE}} -o "zeromq/*:encryption=tweetnacl" --build=missing
 
     - name: Configure CMake
       shell: bash
@@ -53,4 +60,4 @@ jobs:
 
     - name: run test (Windows)
       working-directory: ${{github.workspace}}/build
-      run: $env:PATH+=";${{env.BUILD_TYPE}}"; tests/${{env.BUILD_TYPE}}/behaviortree_cpp_test.exe
+      run: $env:PATH+=";${{env.BUILD_TYPE}}"; tests/${{env.BUILD_TYPE}}/behaviortree_cpp_picknik_test.exe
