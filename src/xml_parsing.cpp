@@ -504,6 +504,11 @@ void VerifyXML(const std::string& xml_text,
           ThrowError(line_number, std::string("The node '") + registered_name +
                                       "' must have 1 or more children");
         }
+        if(registered_name == "TryCatch" && children_count < 2)
+        {
+          ThrowError(line_number, std::string("The node 'TryCatch' must have "
+                                              "at least 2 children"));
+        }
         if(registered_name == "ReactiveSequence")
         {
           size_t async_count = 0;
