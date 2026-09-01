@@ -686,6 +686,61 @@ TEST(SubTree, SubtreeModels)
   tree.tickWhileRunning();
 }
 
+TEST(SubTree, EmptyModelDefaultIsNotMandatory)
+{
+  struct TestCase
+  {
+    const char* name;
+    const char* port_model;
+    const char* invocation_attributes;
+    const char* expected_value;
+    bool should_build;
+  };
+
+  const TestCase test_cases[] = {
+    { "empty default, not remapped", R"(<inout_port name="note" default=""/>)", "", "", true },
+    { "empty default, explicitly empty", R"(<inout_port name="note" default=""/>)",
+      R"( note="")", "", true },
+    { "non-empty default, not remapped", R"(<inout_port name="note" default="something"/>)",
+      "", "something", true },
+    { "no default, not remapped", R"(<inout_port name="note"/>)", "", "", false },
+  };
+
+  for(const auto& test_case : test_cases)
+  {
+    SCOPED_TRACE(test_case.name);
+    const auto xml_text = StrCat(
+        R"(<root main_tree_to_execute="MainTree" BTCPP_format="4">
+  <TreeNodesModel>
+    <SubTree ID="Child">)",
+        test_case.port_model,
+        R"(</SubTree>
+  </TreeNodesModel>
+  <BehaviorTree ID="MainTree">
+    <SubTree ID="Child")",
+        test_case.invocation_attributes,
+        R"(/>
+  </BehaviorTree>
+  <BehaviorTree ID="Child">
+    <ScriptCondition code="note==')",
+        test_case.expected_value,
+        R"('"/>
+  </BehaviorTree>
+</root>)");
+
+    BehaviorTreeFactory factory;
+    if(test_case.should_build)
+    {
+      auto tree = factory.createTreeFromText(xml_text);
+      EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+    }
+    else
+    {
+      EXPECT_THROW(factory.createTreeFromText(xml_text), RuntimeError);
+    }
+  }
+}
+
 class PrintToConsole : public BT::SyncActionNode
 {
 public:

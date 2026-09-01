@@ -931,7 +931,7 @@ TreeNode::Ptr XMLParser::PImpl::createNodeFromXML(const XMLElement* element,
         if(it == port_remap.end() && !do_autoremap)
         {
           // remapping is not explicitly defined in the XML: use the model
-          if(port_info.defaultValueString().empty())
+          if(port_info.defaultValue().empty())
           {
             auto msg = StrCat("In the <TreeNodesModel> the <Subtree ID=\"", type_ID,
                               "\"> is defining a mandatory port called [", port_name,
