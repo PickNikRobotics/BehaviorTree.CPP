@@ -1,6 +1,7 @@
 #include "test_helper.hpp"
 
 #include "behaviortree_cpp/bt_factory.h"
+#include "behaviortree_cpp/exceptions.h"
 
 #include <set>
 
@@ -8,7 +9,6 @@
 
 #include "../sample_nodes/dummy_nodes.h"
 #include "../sample_nodes/movebase_node.h"
-#include "behaviortree_cpp/exceptions.h"
 
 using namespace BT;
 
@@ -684,6 +684,63 @@ TEST(SubTree, SubtreeModels)
   ASSERT_EQ(out_ports.count("out_state"), 1u);
   EXPECT_EQ(out_ports.at("out_state"), "{my_state}");
   tree.tickWhileRunning();
+}
+
+TEST(SubTree, EmptyModelDefaultIsNotMandatory)
+{
+  struct TestCase
+  {
+    const char* name;
+    const char* port_model;
+    const char* invocation_attributes;
+    const char* expected_value;
+    bool should_build;
+  };
+
+  const TestCase test_cases[] = {
+    { "empty default, not remapped", R"(<inout_port name="note" default=""/>)", "", "",
+      true },
+    { "empty default, explicitly empty", R"(<inout_port name="note" default=""/>)",
+      R"( note="")", "", true },
+    { "non-empty default, not remapped",
+      R"(<inout_port name="note" default="something"/>)", "", "something", true },
+    { "no default, not remapped", R"(<inout_port name="note"/>)", "", "", false },
+  };
+
+  for(const auto& test_case : test_cases)
+  {
+    const auto xml_text = StrCat(
+        R"(<root main_tree_to_execute="MainTree" BTCPP_format="4">
+  <TreeNodesModel>
+    <SubTree ID="Child">)",
+        test_case.port_model,
+        R"(</SubTree>
+  </TreeNodesModel>
+  <BehaviorTree ID="MainTree">
+    <SubTree ID="Child")",
+        test_case.invocation_attributes,
+        R"(/>
+  </BehaviorTree>
+  <BehaviorTree ID="Child">
+    <ScriptCondition code="note==')",
+        test_case.expected_value,
+        R"('"/>
+  </BehaviorTree>
+</root>)");
+
+    BehaviorTreeFactory factory;
+    if(test_case.should_build)
+    {
+      Tree tree;
+      ASSERT_NO_THROW(tree = factory.createTreeFromText(xml_text)) << test_case.name;
+      EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS) << test_case.name;
+    }
+    else
+    {
+      EXPECT_THROW((void)factory.createTreeFromText(xml_text), RuntimeError)
+          << test_case.name;
+    }
+  }
 }
 
 class PrintToConsole : public BT::SyncActionNode
