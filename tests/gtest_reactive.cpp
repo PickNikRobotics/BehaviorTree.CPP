@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include "behaviortree_cpp/xml_parsing.h"
 #include "behaviortree_cpp/bt_factory.h"
 #include "test_helper.hpp"
 #include "behaviortree_cpp/loggers/bt_observer.h"
@@ -183,4 +185,126 @@ TEST(Reactive, TwoAsyncNodesInReactiveSequence)
   RegisterTestTick(factory, "Test", counters);
 
   EXPECT_ANY_THROW(auto tree = factory.createTreeFromText(reactive_xml_text));
+}
+
+namespace
+{
+struct ReactiveChildCase
+{
+  const char* name;
+  const char* xml;
+};
+
+class ReactiveGenericChild : public testing::TestWithParam<ReactiveChildCase>
+{
+};
+
+TEST_P(ReactiveGenericChild, ValidatesConstructsAndTicksSuccessfully)
+{
+  // GIVEN a ReactiveSequence containing a registered child in either XML form.
+  BT::BehaviorTreeFactory factory;
+  factory.registerSimpleCondition("Check",
+                                  [](BT::TreeNode&) { return NodeStatus::SUCCESS; });
+  const std::string xml =
+      std::string(R"(<root BTCPP_format="4" main_tree_to_execute="Test">
+        <BehaviorTree ID="Test"><Control ID="ReactiveSequence">)") +
+      GetParam().xml +
+      "</Control></BehaviorTree>"
+      R"(<BehaviorTree ID="ChildTree"><AlwaysSuccess/></BehaviorTree></root>)";
+  std::unordered_map<std::string, BT::NodeType> registered_nodes;
+  for(const auto& [name, manifest] : factory.manifests())
+  {
+    registered_nodes.emplace(name, manifest.type);
+  }
+
+  // WHEN validation and construction consume the same XML and node catalog.
+  ASSERT_NO_THROW(BT::VerifyXML(xml, registered_nodes));
+  auto tree = factory.createTreeFromText(xml);
+
+  // THEN the resolved child executes successfully.
+  EXPECT_EQ(tree.tickExactlyOnce(), NodeStatus::SUCCESS);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    XmlForms, ReactiveGenericChild,
+    testing::Values(
+        ReactiveChildCase{ "GenericAction", R"(<Action ID="AlwaysSuccess"/>)" },
+        ReactiveChildCase{ "NativeAction", "<AlwaysSuccess/>" },
+        ReactiveChildCase{ "SubTree", R"(<SubTree ID="ChildTree"/>)" },
+        ReactiveChildCase{ "GenericCondition", R"(<Condition ID="Check"/>)" },
+        ReactiveChildCase{ "GenericControl",
+                           R"(<Control ID="Sequence"><AlwaysSuccess/></Control>)" },
+        ReactiveChildCase{ "GenericDecorator",
+                           R"(<Decorator ID="Inverter"><AlwaysFailure/></Decorator>)" }),
+    [](const testing::TestParamInfo<ReactiveChildCase>& info) {
+      return info.param.name;
+    });
+}  // namespace
+
+TEST(Reactive, GenericAsyncChildrenPreserveMultipleAsyncRejection)
+{
+  // GIVEN two asynchronous control children expressed with generic tags.
+  BT::BehaviorTreeFactory factory;
+  const std::string xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="Test">
+        <ReactiveSequence>
+          <Control ID="AsyncSequence"><AlwaysSuccess/></Control>
+          <Control ID="AsyncSequence"><AlwaysSuccess/></Control>
+        </ReactiveSequence>
+      </BehaviorTree>
+    </root>)";
+
+  // WHEN registering the tree.
+  // THEN the async-child guard still rejects it for the intended reason.
+  try
+  {
+    factory.registerBehaviorTreeFromText(xml);
+    FAIL() << "Expected multiple async children to be rejected";
+  }
+  catch(const BT::RuntimeError& error)
+  {
+    EXPECT_THAT(error.what(), testing::HasSubstr("more than one async child"));
+  }
+}
+
+TEST(Reactive, UnknownGenericChildIdIsRejected)
+{
+  // GIVEN a generic Action referencing an unregistered Behavior.
+  BT::BehaviorTreeFactory factory;
+  const std::string xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="Test">
+        <ReactiveSequence><Action ID="MissingBehavior"/></ReactiveSequence>
+      </BehaviorTree>
+    </root>)";
+
+  // WHEN registering the tree.
+  // THEN the unresolved ID remains an error and identifies the missing Behavior.
+  try
+  {
+    factory.registerBehaviorTreeFromText(xml);
+    FAIL() << "Expected unknown child ID to be rejected";
+  }
+  catch(const BT::RuntimeError& error)
+  {
+    EXPECT_THAT(error.what(), testing::HasSubstr("MissingBehavior"));
+  }
+}
+
+TEST(Reactive, MissingOrEmptyGenericChildIdIsRejected)
+{
+  // GIVEN generic child tags without a usable registered ID.
+  for(const char* child : { "<Action/>", R"(<Action ID=""/>)" })
+  {
+    SCOPED_TRACE(child);
+    BT::BehaviorTreeFactory factory;
+    const std::string xml = std::string(R"(<root BTCPP_format="4"><BehaviorTree ID="Test">
+          <ReactiveSequence>)") +
+                            child + "</ReactiveSequence></BehaviorTree></root>";
+
+    // WHEN registering the malformed tree.
+    // THEN the generic tag cannot stand in for a registered Behavior.
+    EXPECT_THROW(factory.registerBehaviorTreeFromText(xml), BT::RuntimeError);
+  }
 }
