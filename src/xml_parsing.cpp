@@ -510,7 +510,17 @@ void VerifyXML(const std::string& xml_text,
           for(auto child = node->FirstChildElement(); child != nullptr;
               child = child->NextSiblingElement())
           {
-            const std::string child_name = child->Name();
+            std::string child_name = child->Name();
+            // Generic node tags carry their registered name in ID, just as in
+            // the recursive validation below. SubTree keeps its own node type.
+            if(child_name == "Action" || child_name == "Condition" ||
+               child_name == "Control" || child_name == "Decorator")
+            {
+              if(const char* child_id = child->Attribute("ID"))
+              {
+                child_name = child_id;
+              }
+            }
             const auto child_search = registered_nodes.find(child_name);
             if(child_search == registered_nodes.end())
             {
