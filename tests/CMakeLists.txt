@@ -18,6 +18,7 @@ set(BT_TESTS
   gtest_postconditions.cpp
   gtest_match.cpp
   gtest_json.cpp
+  gtest_xml_diff.cpp
   gtest_reactive.cpp
   gtest_reactive_backchaining.cpp
   gtest_sequence.cpp

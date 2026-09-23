@@ -143,6 +143,7 @@ list(APPEND BT_SOURCE
     src/script_parser.cpp
     src/json_export.cpp
     src/xml_parsing.cpp
+    src/xml_diff.cpp
 
     src/actions/test_node.cpp
     src/actions/sleep_node.cpp
