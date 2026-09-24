@@ -82,7 +82,7 @@ TEST(XMLDiff, MovedAncestorIgnoresModificationMovedOutsideItsMatch)
 
   const std::string diff = BT::RenderXMLDiff(before, after, BT::XMLDiffFormat::PlainText);
   const size_t moved_section = diff.find("Moved\n-----\n");
-  const size_t container_move = diff.find("/root/Left[1]/Container[1] → "
+  const size_t container_move = diff.find("/root/Left[1]/Container[1] \xE2\x86\x92 "
                                           "/root/Right[1]/Container[1]");
   EXPECT_NE(moved_section, std::string::npos);
   EXPECT_NE(container_move, std::string::npos);
@@ -487,7 +487,8 @@ TEST(XMLDiff, ReorderedDuplicateSiblingsReportAbsolutePosition)
   constexpr std::string_view after = R"(<root><A/><B/><A/></root>)";
 
   const std::string diff = BT::RenderXMLDiff(before, after, BT::XMLDiffFormat::PlainText);
-  EXPECT_NE(diff.find("/root/B[1] → /root/B[1] (sibling position 3 → 2)"),
+  EXPECT_NE(diff.find("/root/B[1] \xE2\x86\x92 /root/B[1] (sibling position 3 "
+                      "\xE2\x86\x92 2)"),
             std::string::npos);
 }
 
@@ -533,8 +534,10 @@ TEST(XMLDiff, RejectsEmbeddedNulAndTrailingDocument)
   std::string malformed = "<root/>";
   malformed.push_back('\0');
   malformed += "<extra/>";
-  EXPECT_THROW(BT::RenderXMLDiff(malformed, "<root/>"), BT::RuntimeError);
-  EXPECT_THROW(BT::RenderXMLDiff("<root/>", malformed), BT::RuntimeError);
+  EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff(malformed, "<root/>")),
+               BT::RuntimeError);
+  EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff("<root/>", malformed)),
+               BT::RuntimeError);
 }
 
 TEST(XMLDiff, RejectsInvalidUTF8InsteadOfEmittingIt)
@@ -546,8 +549,10 @@ TEST(XMLDiff, RejectsInvalidUTF8InsteadOfEmittingIt)
   {
     const std::string malformed =
         "<root><A name=\"" + std::string(invalid) + "\"/></root>";
-    EXPECT_THROW(BT::RenderXMLDiff("<root/>", malformed), BT::RuntimeError);
-    EXPECT_THROW(BT::RenderXMLDiff(malformed, "<root/>"), BT::RuntimeError);
+    EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff("<root/>", malformed)),
+                 BT::RuntimeError);
+    EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff(malformed, "<root/>")),
+                 BT::RuntimeError);
   }
   EXPECT_NE(BT::RenderXMLDiff("<root/>", "<root><A name=\"café\"/></root>").find("café"),
             std::string::npos);
@@ -559,7 +564,9 @@ TEST(XMLDiff, RejectsInvalidXMLCharacterReferences)
   {
     const std::string malformed =
         "<root><A value=\"" + std::string(reference) + "\"/></root>";
-    EXPECT_THROW(BT::RenderXMLDiff(malformed, "<root/>"), BT::RuntimeError) << reference;
+    EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff(malformed, "<root/>")),
+                 BT::RuntimeError)
+        << reference;
   }
   EXPECT_EQ(BT::RenderXMLDiff("<root><!-- &#0; --><![CDATA[&#0;]]></root>", "<root/>"),
             "## Behavior Tree XML Diff\n\nNo changes.\n");

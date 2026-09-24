@@ -1143,8 +1143,8 @@ std::string ReorderPositionNote(const Node& before)
   {
     return {};
   }
-  return " (sibling position " + std::to_string(before.sibling_index + 1) + " → " +
-         std::to_string(before.match->sibling_index + 1) + ")";
+  return " (sibling position " + std::to_string(before.sibling_index + 1) +
+         " \xE2\x86\x92 " + std::to_string(before.match->sibling_index + 1) + ")";
 }
 
 void RenderCodeBlock(XMLDiffFormat format, std::string_view language,
@@ -1234,8 +1234,8 @@ std::string RenderXMLDiff(std::string_view before_xml, std::string_view after_xm
                                                    "modified\n------------------\n");
     for(const Node* node : moved_and_modified)
     {
-      output << DisplayPath(*node, format) << " → " << DisplayPath(*node->match, format)
-             << ReorderPositionNote(*node) << '\n';
+      output << DisplayPath(*node, format) << " \xE2\x86\x92 "
+             << DisplayPath(*node->match, format) << ReorderPositionNote(*node) << '\n';
       std::ostringstream content;
       RenderNodeDiff(*node, *node->match, 0, content);
       RenderCodeBlock(format, "diff", content.str(), output);
@@ -1260,8 +1260,8 @@ std::string RenderXMLDiff(std::string_view before_xml, std::string_view after_xm
     output << (format == XMLDiffFormat::Markdown ? "### Moved\n\n" : "Moved\n-----\n");
     for(const Node* node : moved_only)
     {
-      output << DisplayPath(*node, format) << " → " << DisplayPath(*node->match, format)
-             << ReorderPositionNote(*node) << '\n';
+      output << DisplayPath(*node, format) << " \xE2\x86\x92 "
+             << DisplayPath(*node->match, format) << ReorderPositionNote(*node) << '\n';
       std::ostringstream content;
       RenderWholeNode(*node->match, 0, content);
       RenderCodeBlock(format, "xml", content.str(), output);
