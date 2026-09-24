@@ -590,8 +590,8 @@ TEST(XMLDiff, RejectsInvalidUTF8InsteadOfEmittingIt)
     EXPECT_THROW(static_cast<void>(BT::RenderXMLDiff(malformed, "<root/>")),
                  BT::RuntimeError);
   }
-  EXPECT_NE(BT::RenderXMLDiff("<root/>", "<root><A name=\"caf\xC3\xA9\"/></root>")
-                .find("caf\xC3\xA9"),
+  EXPECT_NE(BT::RenderXMLDiff("<root/>", "<root><A name=\"\xC3\xA9\"/></root>")
+                .find("\xC3\xA9"),
             std::string::npos);
 }
 
