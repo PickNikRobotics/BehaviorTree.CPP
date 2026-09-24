@@ -1056,16 +1056,16 @@ std::vector<Node*> ModifiedRoots(const Document& before)
       continue;
     }
 
-    bool inside_move = false;
+    bool inside_rendered_ancestor = false;
     for(Node* ancestor = node->parent; ancestor; ancestor = ancestor->parent)
     {
-      if(IsMoved(*ancestor))
+      if(IsMoved(*ancestor) || IsModified(*ancestor))
       {
-        inside_move = true;
+        inside_rendered_ancestor = true;
         break;
       }
     }
-    if(!inside_move)
+    if(!inside_rendered_ancestor)
     {
       modified.push_back(node);
     }
