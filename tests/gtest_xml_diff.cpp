@@ -422,6 +422,17 @@ TEST(XMLDiff, MarkdownEscapesControlWhitespaceAndBacktickRuns)
   EXPECT_EQ(plain.find("note=\"new\n"), std::string::npos);
 }
 
+TEST(XMLDiff, PlainTextPathShowsDecodedIdentifier)
+{
+  constexpr std::string_view before =
+      R"(<root><Action ID="A&amp;B&lt;C" value="old"/></root>)";
+  constexpr std::string_view after =
+      R"(<root><Action ID="A&amp;B&lt;C" value="new"/></root>)";
+  const std::string diff = BT::RenderXMLDiff(before, after, BT::XMLDiffFormat::PlainText);
+  EXPECT_NE(diff.find("At /root/A&B<C[1]:"), std::string::npos) << diff;
+  EXPECT_EQ(diff.find("A&amp;B&lt;C[1]"), std::string::npos) << diff;
+}
+
 TEST(XMLDiff, RepresentativeNestedRefactorRemainsReviewable)
 {
   constexpr std::string_view before = R"(

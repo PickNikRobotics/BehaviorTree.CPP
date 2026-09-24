@@ -103,6 +103,24 @@ std::string EscapeXML(std::string_view text)
   return escaped;
 }
 
+std::string EscapePath(std::string_view text)
+{
+  std::string escaped;
+  escaped.reserve(text.size());
+  for(const unsigned char ch : text)
+  {
+    if(ch < 0x20 || ch == 0x7F)
+    {
+      escaped += "&#" + std::to_string(ch) + ";";
+    }
+    else
+    {
+      escaped += static_cast<char>(ch);
+    }
+  }
+  return escaped;
+}
+
 std::string LengthPrefixed(std::string_view text)
 {
   return std::to_string(text.size()) + ":" + std::string(text);
@@ -1135,7 +1153,7 @@ void RenderNodeDiff(const Node& before, const Node& after, size_t indent,
 
 std::string DisplayPath(const Node& node, XMLDiffFormat format)
 {
-  const std::string path = EscapeXML(Path(node));
+  const std::string path = EscapePath(Path(node));
   if(format != XMLDiffFormat::Markdown)
   {
     return path;
