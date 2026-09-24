@@ -541,6 +541,19 @@ TEST(XMLDiff, ModifiedParentIncludesChildEditOnlyOnce)
   EXPECT_EQ(diff.find("- <A value=\"old\"/>"), std::string::npos) << diff;
 }
 
+TEST(XMLDiff, ReorderedModifiedChildIsNotRepeatedInModifiedParent)
+{
+  const std::string diff =
+      BT::RenderXMLDiff(R"(<root><Z state="old"><B/><A value="old"/></Z></root>)",
+                        R"(<root><Z state="new"><A value="new"/><B/></Z></root>)",
+                        BT::XMLDiffFormat::PlainText);
+  const size_t first = diff.find("value=\"old\"");
+  ASSERT_NE(first, std::string::npos) << diff;
+  EXPECT_EQ(diff.find("value=\"old\"", first + 1), std::string::npos) << diff;
+  EXPECT_NE(diff.find("Moved and modified\n------------------"), std::string::npos)
+      << diff;
+}
+
 TEST(XMLDiff, RejectsEmbeddedNulAndTrailingDocument)
 {
   std::string malformed = "<root/>";

@@ -1014,6 +1014,12 @@ bool IsModified(const Node& before)
   return before.match && before.semantic_attributes != before.match->semantic_attributes;
 }
 
+bool ChildModificationBelongsInParent(const Node& child, const Node& parent)
+{
+  return child.match && child.match->parent == parent.match &&
+         (!child.reordered || IsMoved(parent));
+}
+
 bool HasModification(const Node& before)
 {
   if(IsModified(before))
@@ -1022,7 +1028,7 @@ bool HasModification(const Node& before)
   }
   return std::any_of(before.children.begin(), before.children.end(),
                      [&](const Node* child) {
-                       return child->match && child->match->parent == before.match &&
+                       return ChildModificationBelongsInParent(*child, before) &&
                               HasModification(*child);
                      });
 }
@@ -1105,7 +1111,7 @@ void RenderNodeDiff(const Node& before, const Node& after, size_t indent,
 
   for(const Node* before_child : before.children)
   {
-    if(before_child->match && before_child->match->parent == &after &&
+    if(ChildModificationBelongsInParent(*before_child, before) &&
        HasModification(*before_child))
     {
       RenderNodeDiff(*before_child, *before_child->match, indent + 2, output);
