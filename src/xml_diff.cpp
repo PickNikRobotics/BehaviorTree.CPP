@@ -557,8 +557,10 @@ size_t MatchedChildCount(const Node* before, const Node* after)
 int AttributeSimilarity(const Node& before, const Node& after)
 {
   int score = 0;
-  for(const auto& [before_name, before_value] : before.semantic_attributes)
+  for(const auto& entry : before.semantic_attributes)
   {
+    const std::string& before_name = entry.first;
+    const std::string& before_value = entry.second;
     const auto after_attribute = std::find_if(
         after.semantic_attributes.begin(), after.semantic_attributes.end(),
         [&](const auto& attribute) { return attribute.first == before_name; });
