@@ -755,7 +755,6 @@ TEST(SubTree, EmptyModelDefaultIsNotMandatory)
 
   for(const auto& test_case : test_cases)
   {
-    SCOPED_TRACE(test_case.name);
     const auto xml_text = StrCat(
         R"(<root main_tree_to_execute="MainTree" BTCPP_format="4">
   <TreeNodesModel>
@@ -778,12 +777,13 @@ TEST(SubTree, EmptyModelDefaultIsNotMandatory)
     BehaviorTreeFactory factory;
     if(test_case.should_build)
     {
-      auto tree = factory.createTreeFromText(xml_text);
-      EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+      Tree tree;
+      ASSERT_NO_THROW(tree = factory.createTreeFromText(xml_text)) << test_case.name;
+      EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS) << test_case.name;
     }
     else
     {
-      EXPECT_THROW(factory.createTreeFromText(xml_text), RuntimeError);
+      EXPECT_THROW(factory.createTreeFromText(xml_text), RuntimeError) << test_case.name;
     }
   }
 }
