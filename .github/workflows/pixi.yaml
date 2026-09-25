@@ -3,7 +3,7 @@ name: Pixi (conda)
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
