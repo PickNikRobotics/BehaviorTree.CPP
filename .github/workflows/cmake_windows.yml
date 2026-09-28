@@ -3,7 +3,7 @@ name: cmake Windows
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -15,6 +15,9 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
+      # Without this, a failing Debug job cancels Release mid-build and hides
+      # whatever it would have reported.
+      fail-fast: false
       matrix:
         os: [windows-latest]
         build_type: [Release, Debug]
@@ -30,7 +33,13 @@ jobs:
       run: conan profile detect
 
     - name: Install conan dependencies
-      run: conan install conanfile.py -s build_type=${{ matrix.build_type }} --build=missing --settings:host compiler.cppstd=17
+      # encryption=tweetnacl swaps zeromq's default libsodium dependency for the
+      # copy bundled in libzmq. CURVE support is unchanged; what goes away is the
+      # only conan package in this graph built by msbuild instead of cmake.
+      # libsodium's hand-written .vcxproj gets PlatformToolset v145 from
+      # compiler.version=195 while vcvars lands on VCToolsVersion 14.44, and
+      # msbuild rejects the pair (MSB8052).
+      run: conan install conanfile.py -s build_type=${{ matrix.build_type }} -o "zeromq/*:encryption=tweetnacl" --build=missing --settings:host compiler.cppstd=17
 
     - name: Normalize build type
       shell: bash
@@ -46,4 +55,4 @@ jobs:
 
     - name: Run tests
       working-directory: ${{ github.workspace }}/build
-      run: $env:PATH+=";${{ matrix.build_type }}"; tests/${{ matrix.build_type }}/behaviortree_cpp_test.exe
+      run: $env:PATH+=";${{ matrix.build_type }}"; tests/${{ matrix.build_type }}/behaviortree_cpp_picknik_test.exe

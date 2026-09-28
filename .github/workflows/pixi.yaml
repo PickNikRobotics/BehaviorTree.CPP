@@ -3,7 +3,7 @@ name: Pixi (conda)
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -14,6 +14,9 @@ concurrency:
 jobs:
   pixi_conda_build:
     strategy:
+      # Without this, a failing windows job cancels the ubuntu one mid-build and
+      # hides whatever it would have reported.
+      fail-fast: false
       matrix:
         os:
           - windows-latest
@@ -22,9 +25,10 @@ jobs:
     steps:
       # Pixi is the tool used to create/manage conda environment
       - uses: actions/checkout@v6
-      - uses: prefix-dev/setup-pixi@v0.9.4
+      # pixi.lock is format v7, which v0.40.3 cannot read.
+      - uses: prefix-dev/setup-pixi@v0.10.1
         with:
-          pixi-version: v0.40.3
+          pixi-version: v0.76.1
       - name: Build
         run: pixi run build
       - name: Run tests
