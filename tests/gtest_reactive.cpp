@@ -297,7 +297,6 @@ TEST(Reactive, MissingOrEmptyGenericChildIdIsRejected)
   // GIVEN generic child tags without a usable registered ID.
   for(const char* child : { "<Action/>", R"(<Action ID=""/>)" })
   {
-    SCOPED_TRACE(child);
     BT::BehaviorTreeFactory factory;
     const std::string xml = std::string(R"(<root BTCPP_format="4"><BehaviorTree ID="Test">
           <ReactiveSequence>)") +
@@ -305,6 +304,6 @@ TEST(Reactive, MissingOrEmptyGenericChildIdIsRejected)
 
     // WHEN registering the malformed tree.
     // THEN the generic tag cannot stand in for a registered Behavior.
-    EXPECT_THROW(factory.registerBehaviorTreeFromText(xml), BT::RuntimeError);
+    EXPECT_THROW(factory.registerBehaviorTreeFromText(xml), BT::RuntimeError) << child;
   }
 }
