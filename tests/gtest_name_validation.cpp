@@ -414,3 +414,110 @@ TEST_F(NameValidationXMLTest, InvalidSubTreePortName_StartsWithDigit)
     </root>)";
   EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
 }
+
+// A SubTree model may declare a port whose name IsAllowedPortName refuses.
+// validatePortName only rejects a leading digit, so `_myPort` is accepted as a
+// declaration, but the instance attribute that would remap it is diverted to
+// other_attributes and the node reads its default instead. Silently.
+TEST_F(NameValidationXMLTest, RemappingADeclaredUnusablePortNameThrows)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+      <BehaviorTree ID="MainTree">
+        <SubTree ID="MySubTree" _myPort="{outer}"/>
+      </BehaviorTree>
+      <BehaviorTree ID="MySubTree">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+      <TreeNodesModel>
+        <SubTree ID="MySubTree">
+          <input_port name="_myPort" default="unwired"/>
+        </SubTree>
+      </TreeNodesModel>
+    </root>)";
+  try
+  {
+    factory.createTreeFromText(xml);
+    FAIL() << "expected a RuntimeError";
+  }
+  catch(const RuntimeError& err)
+  {
+    const std::string msg = err.what();
+    EXPECT_NE(msg.find("_myPort"), std::string::npos) << msg;
+    EXPECT_NE(msg.find("my_port"), std::string::npos) << msg;
+  }
+}
+
+// The same underscore attribute on a SubTree that does not declare it is UI
+// state, not a port. moveit_pro_example_ws carries 148 of these. Keep loading.
+TEST_F(NameValidationXMLTest, UndeclaredUnderscoreAttributeIsStillIgnored)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+      <BehaviorTree ID="MainTree">
+        <SubTree ID="MySubTree" _collapsed="true"/>
+      </BehaviorTree>
+      <BehaviorTree ID="MySubTree">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+      <TreeNodesModel>
+        <SubTree ID="MySubTree">
+          <input_port name="goal" default="g"/>
+        </SubTree>
+      </TreeNodesModel>
+    </root>)";
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
+}
+
+// A declared-but-unusable port that nobody remaps keeps its default and keeps
+// loading. This shape ships in moveit_pro_example_ws.
+TEST_F(NameValidationXMLTest, DeclaredUnusablePortNameLoadsWhenNotRemapped)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+      <BehaviorTree ID="MainTree">
+        <SubTree ID="MySubTree"/>
+      </BehaviorTree>
+      <BehaviorTree ID="MySubTree">
+        <AlwaysSuccess/>
+      </BehaviorTree>
+      <TreeNodesModel>
+        <SubTree ID="MySubTree">
+          <inout_port name="_collapsed" default="false"/>
+        </SubTree>
+      </TreeNodesModel>
+    </root>)";
+  EXPECT_NO_THROW(factory.createTreeFromText(xml));
+}
+
+namespace
+{
+struct UnusablePortAction : public SyncActionNode
+{
+  UnusablePortAction(const std::string& name, const NodeConfig& config)
+    : SyncActionNode(name, config)
+  {}
+  NodeStatus tick() override
+  {
+    return NodeStatus::SUCCESS;
+  }
+};
+}  // namespace
+
+// The same trap reaches a registered node, not only a SubTree. `CreatePort`
+// screens names through IsAllowedPortName, but the PortsList overload of
+// registerNodeType takes the map as given, so a hand-built list can carry a key
+// no instance attribute will ever bind.
+TEST_F(NameValidationXMLTest, RemappingADeclaredUnusablePortOnARegisteredNodeThrows)
+{
+  factory.registerNodeType<UnusablePortAction>(
+      "UnusablePortAction", PortsList{ { "_foo", PortInfo(PortDirection::INPUT) } });
+
+  const char* xml = R"(
+    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+      <BehaviorTree ID="MainTree">
+        <UnusablePortAction _foo="{outer}"/>
+      </BehaviorTree>
+    </root>)";
+  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+}
