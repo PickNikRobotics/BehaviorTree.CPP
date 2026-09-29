@@ -25,6 +25,7 @@
 var NAVTREE =
 [
   [ "BehaviorTree", "index.html", [
+    [ "BehaviorTree.CPP", "index.html", "index" ],
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
@@ -56,8 +57,8 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "annotated.html",
-"d5/d71/blackboard_8h_source.html",
-"da/d75/bt__sqlite__logger_8h_source.html"
+"d3/d37/class_b_t_1_1_simple_decorator_node.html",
+"da/d61/class_b_t_1_1_tree_node.html#a8874bae4b946a2ea6d1b3db1a696cf6a"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
