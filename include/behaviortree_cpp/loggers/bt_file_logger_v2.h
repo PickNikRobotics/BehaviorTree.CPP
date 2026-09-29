@@ -1,12 +1,12 @@
 #pragma once
-#include <fstream>
-#include <deque>
-#include <array>
-#include <filesystem>
 #include "behaviortree_cpp/loggers/abstract_logger.h"
+
+#include <filesystem>
+#include <memory>
 
 namespace BT
 {
+
 /**
  * @brief The FileLogger2 is a logger that saves the tree as
  * XML and all the transitions.
@@ -35,8 +35,8 @@ public:
   FileLogger2(const FileLogger2& other) = delete;
   FileLogger2& operator=(const FileLogger2& other) = delete;
 
-  FileLogger2(FileLogger2&& other) = default;
-  FileLogger2& operator=(FileLogger2&& other) = default;
+  FileLogger2(FileLogger2&& other) = delete;
+  FileLogger2& operator=(FileLogger2&& other) = delete;
 
   virtual ~FileLogger2() override;
 
@@ -57,8 +57,8 @@ public:
   void flush() override;
 
 private:
-  struct PImpl;
-  std::unique_ptr<PImpl> _p;
+  struct Pimpl;
+  std::unique_ptr<Pimpl> _p;
 
   void writerLoop();
 };

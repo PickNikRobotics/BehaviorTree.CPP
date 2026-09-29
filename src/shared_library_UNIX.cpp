@@ -1,39 +1,39 @@
-#include <string>
-#include <mutex>
-#include <dlfcn.h>
-#include "behaviortree_cpp/utils/shared_library.h"
 #include "behaviortree_cpp/exceptions.h"
+#include "behaviortree_cpp/utils/shared_library.h"
+
+#include <mutex>
+#include <string>
+
+#include <dlfcn.h>
 
 namespace BT
 {
-SharedLibrary::SharedLibrary()
-{
-  _handle = nullptr;
-}
+SharedLibrary::SharedLibrary() = default;
 
 void SharedLibrary::load(const std::string& path, int)
 {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
 
-  if(_handle)
+  if(_handle != nullptr)
   {
     throw RuntimeError("Library already loaded: " + path);
   }
 
   _handle = dlopen(path.c_str(), RTLD_NOW | RTLD_GLOBAL);
-  if(!_handle)
+  if(_handle == nullptr)
   {
     const char* err = dlerror();
-    throw RuntimeError("Could not load library: " + (err ? std::string(err) : path));
+    throw RuntimeError("Could not load library: " +
+                       (err != nullptr ? std::string(err) : path));
   }
   _path = path;
 }
 
 void SharedLibrary::unload()
 {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
 
-  if(_handle)
+  if(_handle != nullptr)
   {
     dlclose(_handle);
     _handle = nullptr;
@@ -47,10 +47,10 @@ bool SharedLibrary::isLoaded() const
 
 void* SharedLibrary::findSymbol(const std::string& name)
 {
-  std::unique_lock<std::mutex> lock(_mutex);
+  const std::unique_lock<std::mutex> lock(_mutex);
 
   void* result = nullptr;
-  if(_handle)
+  if(_handle != nullptr)
   {
     result = dlsym(_handle, name.c_str());
   }

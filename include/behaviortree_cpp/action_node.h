@@ -1,5 +1,5 @@
 /* Copyright (C) 2015-2018 Michele Colledanchise -  All Rights Reserved
- * Copyright (C) 2018-2020 Davide Faconti, Eurecat -  All Rights Reserved
+ * Copyright (C) 2018-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -14,12 +14,11 @@
 #ifndef BEHAVIORTREECORE_ACTIONNODE_H
 #define BEHAVIORTREECORE_ACTIONNODE_H
 
+#include "leaf_node.h"
+
 #include <atomic>
-#include <thread>
 #include <future>
 #include <mutex>
-
-#include "leaf_node.h"
 
 namespace BT
 {
@@ -38,6 +37,11 @@ public:
   ActionNodeBase(const std::string& name, const NodeConfig& config);
   ~ActionNodeBase() override = default;
 
+  ActionNodeBase(const ActionNodeBase&) = delete;
+  ActionNodeBase& operator=(const ActionNodeBase&) = delete;
+  ActionNodeBase(ActionNodeBase&&) = delete;
+  ActionNodeBase& operator=(ActionNodeBase&&) = delete;
+
   virtual NodeType type() const override final
   {
     return NodeType::ACTION;
@@ -54,6 +58,11 @@ class SyncActionNode : public ActionNodeBase
 public:
   SyncActionNode(const std::string& name, const NodeConfig& config);
   ~SyncActionNode() override = default;
+
+  SyncActionNode(const SyncActionNode&) = delete;
+  SyncActionNode& operator=(const SyncActionNode&) = delete;
+  SyncActionNode(SyncActionNode&&) = delete;
+  SyncActionNode& operator=(SyncActionNode&&) = delete;
 
   /// throws if the derived class return RUNNING.
   virtual NodeStatus executeTick() override;
@@ -86,6 +95,11 @@ public:
                    const NodeConfig& config);
 
   ~SimpleActionNode() override = default;
+
+  SimpleActionNode(const SimpleActionNode&) = delete;
+  SimpleActionNode& operator=(const SimpleActionNode&) = delete;
+  SimpleActionNode(SimpleActionNode&&) = delete;
+  SimpleActionNode& operator=(SimpleActionNode&&) = delete;
 
 protected:
   virtual NodeStatus tick() override final;
@@ -197,7 +211,12 @@ class CoroActionNode : public ActionNodeBase
 {
 public:
   CoroActionNode(const std::string& name, const NodeConfig& config);
-  virtual ~CoroActionNode() override;
+  ~CoroActionNode() override;
+
+  CoroActionNode(const CoroActionNode&) = delete;
+  CoroActionNode& operator=(const CoroActionNode&) = delete;
+  CoroActionNode(CoroActionNode&&) = delete;
+  CoroActionNode& operator=(CoroActionNode&&) = delete;
 
   /// Use this method to return RUNNING and temporary "pause" the Action.
   void setStatusRunningAndYield();

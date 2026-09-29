@@ -1,17 +1,19 @@
 #pragma once
 
-// Marks these headers as the PickNik fork (behaviortree_cpp_picknik). Stock
-// upstream behaviortree_cpp coexists in the same image for nav2, and its
-// unscoped headers could win include resolution in a misconfigured build —
-// compiling fork consumers against the wrong ABI. Downstream code that
-// requires the fork checks this macro and fails the compile loudly instead.
+// Marks these headers as the PickNik fork (behaviortree_cpp_picknik) rather than
+// stock upstream BehaviorTree.CPP. moveit_pro_behavior_interface's
+// btcpp_fork_guard.hpp #errors when this is absent, so any Behavior translation
+// unit that resolves BT includes to stock headers fails loudly at compile time
+// (moveit_pro#20928, mechanism 4).
 #define BTCPP_PICKNIK_FORK 1
 
-#include <algorithm>
-#include <cctype>
+#include "behaviortree_cpp/contrib/expected.hpp"
+#include "behaviortree_cpp/exceptions.h"
+#include "behaviortree_cpp/utils/safe_any.hpp"
+
 #include <chrono>
-#include <iostream>
 #include <functional>
+#include <iostream>
 #include <sstream>
 #include <string_view>
 #include <typeinfo>
@@ -19,10 +21,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include "behaviortree_cpp/utils/safe_any.hpp"
-#include "behaviortree_cpp/exceptions.h"
-#include "behaviortree_cpp/contrib/expected.hpp"
 
 namespace BT
 {
@@ -314,11 +312,6 @@ struct is_vector<std::vector<T, A>> : std::true_type
 template <typename T>
 [[nodiscard]] std::string toStr(const T& value)
 {
-  auto throw_unspecialized_error = []() {
-    throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
-                            BT::demangle(typeid(T)), "]"));
-  };
-
   if constexpr(IsConvertibleToString<T>())
   {
     return static_cast<std::string>(value);
@@ -342,7 +335,8 @@ template <typename T>
     }
     catch(LogicError&)
     {
-      throw_unspecialized_error();
+      throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
+                              BT::demangle(typeid(T)), "]"));
     }
   }
   else if constexpr(!std::is_arithmetic_v<T>)
@@ -352,7 +346,8 @@ template <typename T>
       return *str;
     }
 
-    throw_unspecialized_error();
+    throw LogicError(StrCat("Function BT::toStr<T>() not specialized for type [",
+                            BT::demangle(typeid(T)), "]"));
   }
   else
   {
@@ -433,11 +428,10 @@ struct Timestamp
 
 [[nodiscard]] bool IsReservedAttribute(StringView str);
 
-/// Throws RuntimeError if the string contains any whitespace character.
-/// Used by port-creation paths (CreatePort and TreeNodesModel XML parsing)
-/// to reject port names like "my port" that would be ambiguous in blackboard
-/// remappings.
-void ThrowIfPortNameContainsWhitespace(StringView name);
+/// Returns the first forbidden character found in the name, or '\0' if valid.
+/// Forbidden characters include: space, tab, newline, CR, < > & " ' / \ : * ? | .
+/// and control characters (ASCII 0-31, 127). UTF-8 multibyte sequences are allowed.
+[[nodiscard]] char findForbiddenChar(StringView name);
 
 class TypeInfo
 {
@@ -509,8 +503,11 @@ public:
     {
       default_value_str_ = BT::toStr(default_value);
     }
+    // NOLINTNEXTLINE(bugprone-empty-catch)
     catch(LogicError&)
-    {}
+    {
+      // conversion to string not available for this type, ignore
+    }
   }
 
   [[nodiscard]] const std::string& description() const;
@@ -538,7 +535,6 @@ template <typename T = AnyTypeAllowed>
                        "and must start with an alphabetic character. "
                        "Underscore is reserved.");
   }
-  ThrowIfPortNameContainsWhitespace(sname);
 
   std::pair<std::string, PortInfo> out;
 

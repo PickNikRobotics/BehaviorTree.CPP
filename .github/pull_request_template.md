@@ -1,11 +1,11 @@
 <!--
-You must run clang-format, otherwise your change may not pass the tests on CI
-We recommend using pre-commit.
+## Instructions
 
-To use:
-    pre-commit run -a
-Or:
-     pre-commit install  # (runs every time you commit in git)
+- Unless your code is self explaining, add comments.
+- Consider if your proposed changes introduces API, ABI, back-compatibility or behavioral changes.
+- If your code is fixing a bug, please create a unit test to reproduce the bug, i.e. a test that fails before the fix and pass after the fix.
+- You use [pre-commit](https://pre-commit.com/) to apply automatically all the required linting rules (clang-format in particular).
+- You should also execute the script `./run_clang_tidy.sh` and correct all the warnings.
 
-See https://github.com/pre-commit/pre-commit
+Please read the CONTRIBUTORS_GUIDE.md file for details and instructions.
 -->

@@ -1,4 +1,4 @@
-/*  Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
  *
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -18,6 +18,18 @@
 
 namespace BT
 {
+/**
+ * @brief The ScriptNode executes a piece of script code to set or modify
+ * entries in the Blackboard.
+ *
+ * The script is passed via the input port "code" and can use the BT++ scripting
+ * language syntax. For instance:
+ *
+ *   <Script code=" msg:='hello world' " />
+ *   <Script code=" A:=42; B:=3.14 " />
+ *
+ * The node always returns SUCCESS after executing the script.
+ */
 class ScriptNode : public SyncActionNode
 {
 public:

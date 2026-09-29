@@ -1,5 +1,5 @@
 /* Copyright (C) 2015-2018 Michele Colledanchise -  All Rights Reserved
- * Copyright (C) 2018-2020 Davide Faconti, Eurecat -  All Rights Reserved
+ * Copyright (C) 2018-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -18,12 +18,27 @@
 
 namespace BT
 {
+/**
+ * @brief The ConditionNode is a leaf node used to check a condition.
+ *
+ * Unlike ActionNodes, a ConditionNode should NOT alter the system or have side-effects.
+ * and should NOT return RUNNING. It should return SUCCESS or FAILURE
+ * synchronously to indicate whether a condition is met.
+ *
+ * Conditions are typically used to check the state of the world or
+ * the system before performing an action (e.g., "IsDoorOpen", "IsBatteryLow").
+ */
 class ConditionNode : public LeafNode
 {
 public:
   ConditionNode(const std::string& name, const NodeConfig& config);
 
-  virtual ~ConditionNode() override = default;
+  ~ConditionNode() override = default;
+
+  ConditionNode(const ConditionNode&) = delete;
+  ConditionNode& operator=(const ConditionNode&) = delete;
+  ConditionNode(ConditionNode&&) = delete;
+  ConditionNode& operator=(ConditionNode&&) = delete;
 
   //Do nothing
   virtual void halt() override final
@@ -57,6 +72,11 @@ public:
                       const NodeConfig& config);
 
   ~SimpleConditionNode() override = default;
+
+  SimpleConditionNode(const SimpleConditionNode&) = delete;
+  SimpleConditionNode& operator=(const SimpleConditionNode&) = delete;
+  SimpleConditionNode(SimpleConditionNode&&) = delete;
+  SimpleConditionNode& operator=(SimpleConditionNode&&) = delete;
 
 protected:
   virtual NodeStatus tick() override;

@@ -1,14 +1,20 @@
 #include "behaviortree_cpp/blackboard.h"
-#include <unordered_set>
+
 #include "behaviortree_cpp/json_export.h"
+
+#include <tuple>
+#include <unordered_set>
 
 namespace BT
 {
 
+namespace
+{
 bool IsPrivateKey(StringView str)
 {
   return str.size() >= 1 && str.data()[0] == '_';
 }
+}  // namespace
 
 void Blackboard::enableAutoRemapping(bool remapping)
 {
@@ -40,6 +46,7 @@ const Any* Blackboard::getAny(const std::string& key) const
 
 Any* Blackboard::getAny(const std::string& key)
 {
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   return const_cast<Any*>(getAnyLocked(key).get());
 }
 
@@ -52,11 +59,13 @@ Blackboard::getEntry(const std::string& key) const
     return rootBlackboard()->getEntry(key.substr(1, key.size() - 1));
   }
 
-  std::unique_lock<std::mutex> lock(mutex_);
-  auto it = storage_.find(key);
-  if(it != storage_.end())
   {
-    return it->second;
+    const std::shared_lock<std::shared_mutex> storage_lock(storage_mutex_);
+    auto it = storage_.find(key);
+    if(it != storage_.end())
+    {
+      return it->second;
+    }
   }
   // not found. Try autoremapping
   if(auto parent = parent_bb_.lock())
@@ -94,6 +103,9 @@ void Blackboard::addSubtreeRemapping(StringView internal, StringView external)
 
 void Blackboard::debugMessage() const
 {
+  // Lock storage_mutex_ (shared) to prevent iterator invalidation from
+  // concurrent modifications (BUG-5 fix).
+  const std::shared_lock storage_lock(storage_mutex_);
   for(const auto& [key, entry] : storage_)
   {
     auto port_type = entry->info.type();
@@ -107,20 +119,34 @@ void Blackboard::debugMessage() const
 
   for(const auto& [from, to] : internal_to_external_)
   {
-    std::cout << "[" << from << "] remapped to port of parent tree [" << to << "]"
-              << std::endl;
-    continue;
+    std::cout << "[" << from << "] remapped to port of parent tree [" << to << "]";
+    // Show the type of the remapped entry from the parent. Issue #408.
+    if(auto parent = parent_bb_.lock())
+    {
+      if(auto entry = parent->getEntry(to))
+      {
+        auto port_type = entry->info.type();
+        if(port_type == typeid(void))
+        {
+          port_type = entry->value.type();
+        }
+        std::cout << " (" << BT::demangle(port_type) << ")";
+      }
+    }
+    std::cout << std::endl;
   }
 }
 
-std::vector<std::string> Blackboard::getKeys() const
+std::vector<StringView> Blackboard::getKeys() const
 {
-  std::unique_lock<std::mutex> lock(mutex_);
+  // Lock storage_mutex_ (shared) to prevent iterator invalidation and
+  // dangling StringView from concurrent modifications (BUG-6 fix).
+  const std::shared_lock storage_lock(storage_mutex_);
   if(storage_.empty())
   {
     return {};
   }
-  std::vector<std::string> out;
+  std::vector<StringView> out;
   out.reserve(storage_.size());
   for(const auto& entry_it : storage_)
   {
@@ -131,13 +157,8 @@ std::vector<std::string> Blackboard::getKeys() const
 
 void Blackboard::clear()
 {
-  std::unique_lock<std::mutex> lock(mutex_);
+  const std::unique_lock storage_lock(storage_mutex_);
   storage_.clear();
-}
-
-std::recursive_mutex& Blackboard::entryMutex() const
-{
-  return entry_mutex_;
 }
 
 void Blackboard::createEntry(const std::string& key, const TypeInfo& info)
@@ -158,46 +179,94 @@ void Blackboard::createEntry(const std::string& key, const TypeInfo& info)
 
 void Blackboard::cloneInto(Blackboard& dst) const
 {
-  std::unique_lock lk1(mutex_);
-  std::unique_lock lk2(dst.mutex_);
+  // We must never hold storage_mutex_ while locking entry_mutex, because
+  // the script evaluation path (ExprAssignment::evaluate) does the reverse:
+  // entry_mutex → storage_mutex_ (via entryInfo → getEntry).
+  //
+  // Strategy: collect shared_ptrs under storage_mutex_, release it,
+  // then copy entry data under entry_mutex only.
 
-  // keys that are not updated must be removed.
-  std::unordered_set<std::string> keys_to_remove;
-  auto& dst_storage = dst.storage_;
-  for(const auto& [key, _] : dst_storage)
+  struct CopyTask
   {
-    keys_to_remove.insert(key);
-  }
+    std::string key;
+    std::shared_ptr<Entry> src;
+    std::shared_ptr<Entry> dst;  // nullptr when a new entry is needed
+  };
 
-  // update or create entries in dst_storage
-  for(const auto& [src_key, src_entry] : storage_)
+  std::vector<CopyTask> tasks;
+  std::vector<std::string> keys_to_remove;
+
+  // Step 1: snapshot src/dst entries under both storage_mutex_ locks.
   {
-    keys_to_remove.erase(src_key);
+    std::shared_lock lk1(storage_mutex_, std::defer_lock);
+    std::unique_lock lk2(dst.storage_mutex_, std::defer_lock);
+    std::lock(lk1, lk2);
 
-    auto it = dst_storage.find(src_key);
-    if(it != dst_storage.end())
+    std::unordered_set<std::string> dst_keys;
+    for(const auto& [key, entry] : dst.storage_)
     {
-      // overwrite
-      auto& dst_entry = it->second;
-      dst_entry->string_converter = src_entry->string_converter;
-      dst_entry->value = src_entry->value;
-      dst_entry->info = src_entry->info;
-      dst_entry->sequence_id++;
-      dst_entry->stamp = std::chrono::steady_clock::now().time_since_epoch();
+      dst_keys.insert(key);
+    }
+
+    for(const auto& [src_key, src_entry] : storage_)
+    {
+      dst_keys.erase(src_key);
+      auto it = dst.storage_.find(src_key);
+      if(it != dst.storage_.end())
+      {
+        tasks.push_back({ src_key, src_entry, it->second });
+      }
+      else
+      {
+        tasks.push_back({ src_key, src_entry, nullptr });
+      }
+    }
+
+    for(const auto& key : dst_keys)
+    {
+      keys_to_remove.push_back(key);
+    }
+  }
+  // storage_mutex_ locks released here
+
+  // Step 2: copy entry data under entry_mutex only (BUG-3 fix).
+  std::vector<std::pair<std::string, std::shared_ptr<Entry>>> new_entries;
+
+  for(auto& task : tasks)
+  {
+    if(task.dst)
+    {
+      // overwrite existing entry
+      std::scoped_lock entry_locks(task.src->entry_mutex, task.dst->entry_mutex);
+      task.dst->string_converter = task.src->string_converter;
+      task.dst->value = task.src->value;
+      task.dst->info = task.src->info;
+      task.dst->sequence_id++;
+      task.dst->stamp = std::chrono::steady_clock::now().time_since_epoch();
     }
     else
     {
-      // create new
-      auto new_entry = std::make_shared<Entry>(src_entry->info);
-      new_entry->value = src_entry->value;
-      new_entry->string_converter = src_entry->string_converter;
-      dst_storage.insert({ src_key, new_entry });
+      // create new entry from src
+      std::scoped_lock src_lock(task.src->entry_mutex);
+      auto new_entry = std::make_shared<Entry>(task.src->info);
+      new_entry->value = task.src->value;
+      new_entry->string_converter = task.src->string_converter;
+      new_entries.emplace_back(task.key, std::move(new_entry));
     }
   }
 
-  for(const auto& key : keys_to_remove)
+  // Step 3: insert new entries and remove stale ones under dst.storage_mutex_.
+  if(!new_entries.empty() || !keys_to_remove.empty())
   {
-    dst_storage.erase(key);
+    const std::unique_lock dst_lock(dst.storage_mutex_);
+    for(auto& [key, entry] : new_entries)
+    {
+      dst.storage_.try_emplace(key, std::move(entry));
+    }
+    for(const auto& key : keys_to_remove)
+    {
+      dst.storage_.erase(key);
+    }
   }
 }
 
@@ -213,7 +282,7 @@ Blackboard::Ptr Blackboard::parent()
 std::shared_ptr<Blackboard::Entry> Blackboard::createEntryImpl(const std::string& key,
                                                                const TypeInfo& info)
 {
-  std::unique_lock<std::mutex> lock(mutex_);
+  const std::unique_lock storage_lock(storage_mutex_);
   // This function might be called recursively, when we do remapping, because we move
   // to the top scope to find already existing  entries
 
@@ -273,9 +342,10 @@ std::shared_ptr<Blackboard::Entry> Blackboard::createEntryImpl(const std::string
 nlohmann::json ExportBlackboardToJSON(const Blackboard& blackboard)
 {
   nlohmann::json dest;
-  for(const std::string& name : blackboard.getKeys())
+  for(auto entry_name : blackboard.getKeys())
   {
-    if(AnyPtrLocked any_ref = blackboard.getAnyLocked(name))
+    const std::string name(entry_name);
+    if(auto any_ref = blackboard.getAnyLocked(name))
     {
       if(auto any_ptr = any_ref.get())
       {
@@ -298,24 +368,17 @@ void ImportBlackboardFromJSON(const nlohmann::json& json, Blackboard& blackboard
         blackboard.createEntry(it.key(), res->second);
         entry = blackboard.getEntry(it.key());
       }
+      // Lock entry_mutex before writing to prevent data races (BUG-4 fix).
+      std::scoped_lock lk(entry->entry_mutex);
       entry->value = res->first;
     }
   }
 }
 
-Blackboard::Entry& Blackboard::Entry::operator=(const Entry& other)
-{
-  value = other.value;
-  info = other.info;
-  string_converter = other.string_converter;
-  sequence_id = other.sequence_id;
-  stamp = other.stamp;
-  return *this;
-}
-
 Blackboard* BT::Blackboard::rootBlackboard()
 {
   auto bb = static_cast<const Blackboard&>(*this).rootBlackboard();
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
   return const_cast<Blackboard*>(bb);
 }
 

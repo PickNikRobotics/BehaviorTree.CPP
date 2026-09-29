@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
-#include <cstring>
-#include <stdexcept>
-#include <limits>
 #include <cstdint>
+#include <cstring>
+#include <limits>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace SafeAny
@@ -18,6 +18,12 @@ namespace SafeAny
 class SimpleString
 {
 public:
+  SimpleString()
+  {
+    _storage.soo.capacity_left = CAPACITY;
+    _storage.soo.data[0] = '\0';
+  }
+
   SimpleString(const std::string& str) : SimpleString(str.data(), str.size())
   {}
 
@@ -29,21 +35,25 @@ public:
 
   SimpleString& operator=(const SimpleString& other)
   {
-    this->~SimpleString();
-    createImpl(other.data(), other.size());
+    if(this != &other)
+    {
+      this->~SimpleString();
+      createImpl(other.data(), other.size());
+    }
     return *this;
   }
 
-  SimpleString(SimpleString&& other) : SimpleString(nullptr, 0)
+  SimpleString(SimpleString&& other) noexcept : SimpleString()
   {
     std::swap(_storage, other._storage);
   }
 
-  SimpleString& operator=(SimpleString&& other)
+  SimpleString& operator=(SimpleString&& other) noexcept
   {
-    this->~SimpleString();
-
-    std::swap(_storage, other._storage);
+    if(this != &other)
+    {
+      std::swap(_storage, other._storage);
+    }
     return *this;
   }
 
@@ -99,46 +109,58 @@ public:
 
   bool operator==(const SimpleString& other) const
   {
-    size_t N = size();
+    const size_t N = size();
     return other.size() == N && std::strncmp(data(), other.data(), N) == 0;
   }
 
   bool operator!=(const SimpleString& other) const
   {
-    size_t N = size();
+    const size_t N = size();
     return other.size() != N || std::strncmp(data(), other.data(), N) != 0;
   }
 
   bool operator<=(const SimpleString& other) const
   {
-    return std::strcmp(data(), other.data()) <= 0;
+    return !(*this > other);
   }
 
   bool operator>=(const SimpleString& other) const
   {
-    return std::strcmp(data(), other.data()) >= 0;
+    return !(*this < other);
   }
 
   bool operator<(const SimpleString& other) const
   {
-    return std::strcmp(data(), other.data()) < 0;
+    const size_t min_size = std::min(size(), other.size());
+    int cmp = std::memcmp(data(), other.data(), min_size);
+    if(cmp != 0)
+    {
+      return cmp < 0;
+    }
+    return size() < other.size();
   }
 
   bool operator>(const SimpleString& other) const
   {
-    return std::strcmp(data(), other.data()) > 0;
+    const size_t min_size = std::min(size(), other.size());
+    int cmp = std::memcmp(data(), other.data(), min_size);
+    if(cmp != 0)
+    {
+      return cmp > 0;
+    }
+    return size() > other.size();
   }
 
   bool isSOO() const
   {
-    return !(_storage.soo.capacity_left & IS_LONG_BIT);
+    return (_storage.soo.capacity_left & IS_LONG_BIT) == 0;
   }
 
 private:
   struct String
   {
-    char* data;
-    std::size_t size;
+    char* data = nullptr;
+    std::size_t size = 0;
   };
 
   constexpr static std::size_t CAPACITY = 15;  // sizeof(String) - 1);
@@ -153,9 +175,9 @@ private:
     struct SOO
     {
       char data[CAPACITY];
-      uint8_t capacity_left;
+      uint8_t capacity_left = CAPACITY;
     } soo;
-  } _storage;
+  } _storage = {};
 
 private:
   void createImpl(const char* input_data, std::size_t size)
@@ -169,7 +191,7 @@ private:
     {
       _storage.str.size = size;
       _storage.soo.capacity_left = IS_LONG_BIT;
-      _storage.str.data = new char[size + 1];
+      _storage.str.data = new char[size + 1];  // NOLINT(cppcoreguidelines-owning-memory)
       std::memcpy(_storage.str.data, input_data, size);
       _storage.str.data[size] = '\0';
     }

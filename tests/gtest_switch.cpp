@@ -1,14 +1,19 @@
-#include <gtest/gtest.h>
 #include "action_test_node.h"
 #include "condition_test_node.h"
+
 #include "behaviortree_cpp/behavior_tree.h"
-#include "behaviortree_cpp/tree_node.h"
 #include "behaviortree_cpp/bt_factory.h"
+#include "behaviortree_cpp/tree_node.h"
+
+#include <gtest/gtest.h>
 
 using BT::NodeStatus;
 using std::chrono::milliseconds;
 
-static const char* xml_text = R"(
+namespace
+{
+
+const char* xml_text = R"(
 
 <root BTCPP_format="4" >
 
@@ -32,6 +37,8 @@ BT::NodeStatus TickWhileRunning(BT::TreeNode& node)
   }
   return status;
 }
+
+}  // namespace
 
 struct SwitchTest : testing::Test
 {
@@ -63,10 +70,14 @@ struct SwitchTest : testing::Test
     root->addChild(&action_42);
     root->addChild(&action_def);
   }
-  ~SwitchTest()
+  ~SwitchTest() override
   {
     root->halt();
   }
+  SwitchTest(const SwitchTest&) = delete;
+  SwitchTest& operator=(const SwitchTest&) = delete;
+  SwitchTest(SwitchTest&&) = delete;
+  SwitchTest& operator=(SwitchTest&&) = delete;
 };
 
 TEST_F(SwitchTest, DefaultCase)

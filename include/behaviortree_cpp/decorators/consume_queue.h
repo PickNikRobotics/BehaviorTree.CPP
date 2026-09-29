@@ -1,4 +1,4 @@
-/*  Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -12,9 +12,10 @@
 
 #pragma once
 
-#include <list>
-#include "behaviortree_cpp/decorator_node.h"
 #include "behaviortree_cpp/actions/pop_from_queue.hpp"
+#include "behaviortree_cpp/decorator_node.h"
+
+#include <list>
 
 namespace BT
 {

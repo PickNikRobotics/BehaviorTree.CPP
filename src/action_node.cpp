@@ -1,5 +1,5 @@
 /* Copyright (C) 2015-2018 Michele Colledanchise -  All Rights Reserved
- * Copyright (C) 2018-2023 Davide Faconti -  All Rights Reserved
+ * Copyright (C) 2018-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -12,8 +12,11 @@
 */
 
 #define MINICORO_IMPL
-#include "minicoro/minicoro.h"
 #include "behaviortree_cpp/action_node.h"
+
+#include "minicoro.h"
+
+#include <iostream>
 
 using namespace BT;
 
@@ -39,7 +42,7 @@ NodeStatus SimpleActionNode::tick()
     prev_status = NodeStatus::RUNNING;
   }
 
-  NodeStatus status = tick_functor_(*this);
+  const NodeStatus status = tick_functor_(*this);
   if(status != prev_status)
   {
     setStatus(status);
@@ -68,13 +71,16 @@ NodeStatus SyncActionNode::executeTick()
 struct CoroActionNode::Pimpl
 {
   mco_coro* coro = nullptr;
-  mco_desc desc;
+  mco_desc desc = {};
 };
 
+namespace
+{
 void CoroEntry(mco_coro* co)
 {
   static_cast<CoroActionNode*>(co->user_data)->tickImpl();
 }
+}  // namespace
 
 CoroActionNode::CoroActionNode(const std::string& name, const NodeConfig& config)
   : ActionNodeBase(name, config), _p(new Pimpl)
@@ -82,7 +88,14 @@ CoroActionNode::CoroActionNode(const std::string& name, const NodeConfig& config
 
 CoroActionNode::~CoroActionNode()
 {
-  destroyCoroutine();
+  try
+  {
+    destroyCoroutine();
+  }
+  catch(const std::exception& ex)
+  {
+    std::cerr << "Exception in ~CoroActionNode(): " << ex.what() << std::endl;
+  }
 }
 
 void CoroActionNode::setStatusRunningAndYield()
@@ -100,7 +113,7 @@ NodeStatus CoroActionNode::executeTick()
     _p->desc = mco_desc_init(CoroEntry, 0);
     _p->desc.user_data = this;
 
-    mco_result res = mco_create(&_p->coro, &_p->desc);
+    const mco_result res = mco_create(&_p->coro, &_p->desc);
     if(res != MCO_SUCCESS)
     {
       throw RuntimeError("Can't create coroutine");
@@ -134,9 +147,9 @@ void CoroActionNode::halt()
 
 void CoroActionNode::destroyCoroutine()
 {
-  if(_p->coro)
+  if(_p->coro != nullptr)
   {
-    mco_result res = mco_destroy(_p->coro);
+    const mco_result res = mco_destroy(_p->coro);
     if(res != MCO_SUCCESS)
     {
       throw RuntimeError("Can't destroy coroutine");
@@ -156,7 +169,7 @@ NodeStatus StatefulActionNode::tick()
 
   if(prev_status == NodeStatus::IDLE)
   {
-    NodeStatus new_status = onStart();
+    const NodeStatus new_status = onStart();
     if(new_status == NodeStatus::IDLE)
     {
       throw LogicError("StatefulActionNode::onStart() must not return IDLE");
@@ -166,7 +179,7 @@ NodeStatus StatefulActionNode::tick()
   //------------------------------------------
   if(prev_status == NodeStatus::RUNNING)
   {
-    NodeStatus new_status = onRunning();
+    const NodeStatus new_status = onRunning();
     if(new_status == NodeStatus::IDLE)
     {
       throw LogicError("StatefulActionNode::onRunning() must not return IDLE");
@@ -210,7 +223,7 @@ NodeStatus BT::ThreadedAction::executeTick()
                   << name() << "]\n"
                   << std::endl;
         // Set the exception pointer and the status atomically.
-        lock_type l(mutex_);
+        const lock_type l(mutex_);
         exptr_ = std::current_exception();
         setStatus(BT::NodeStatus::IDLE);
       }
@@ -218,7 +231,7 @@ NodeStatus BT::ThreadedAction::executeTick()
     });
   }
 
-  lock_type l(mutex_);
+  const lock_type l(mutex_);
   if(exptr_)
   {
     // The official interface of std::exception_ptr does not define any move

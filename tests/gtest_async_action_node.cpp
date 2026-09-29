@@ -9,8 +9,8 @@
 #include <string>
 #include <thread>
 
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 // The mocked version of the base.
 struct MockedThreadedAction : public BT::ThreadedAction
@@ -21,6 +21,7 @@ struct MockedThreadedAction : public BT::ThreadedAction
   // Tick while the node is running.
   BT::NodeStatus spinUntilDone()
   {
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-do-while)
     do
     {
       executeTick();

@@ -1,4 +1,4 @@
-/* Copyright (C) 2020-2022 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2020-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -24,7 +24,12 @@ class ManualSelectorNode : public ControlNode
 public:
   ManualSelectorNode(const std::string& name, const NodeConfig& config);
 
-  virtual ~ManualSelectorNode() override = default;
+  ~ManualSelectorNode() override = default;
+
+  ManualSelectorNode(const ManualSelectorNode&) = delete;
+  ManualSelectorNode& operator=(const ManualSelectorNode&) = delete;
+  ManualSelectorNode(ManualSelectorNode&&) = delete;
+  ManualSelectorNode& operator=(ManualSelectorNode&&) = delete;
 
   virtual void halt() override;
 

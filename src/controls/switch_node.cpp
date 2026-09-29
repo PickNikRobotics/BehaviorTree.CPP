@@ -1,4 +1,4 @@
-/* Copyright (C) 2019-2022 Davide Faconti, Eurecat -  All Rights Reserved
+/* Copyright (C) 2019-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -79,11 +79,7 @@ bool CheckStringEquality(const std::string& v1, const std::string& v2,
   double v1_real = 0;
   double v2_real = 0;
   constexpr auto eps = double(std::numeric_limits<float>::epsilon());
-  if(ToReal(v1, v1_real) && ToReal(v2, v2_real) && std::abs(v1_real - v2_real) <= eps)
-  {
-    return true;
-  }
-  return false;
+  return ToReal(v1, v1_real) && ToReal(v2, v2_real) && std::abs(v1_real - v2_real) <= eps;
 }
 
 }  // namespace BT::details

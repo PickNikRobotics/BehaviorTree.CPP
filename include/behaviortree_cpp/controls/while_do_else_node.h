@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2020-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -35,7 +35,12 @@ class WhileDoElseNode : public ControlNode
 public:
   WhileDoElseNode(const std::string& name);
 
-  virtual ~WhileDoElseNode() override = default;
+  ~WhileDoElseNode() override = default;
+
+  WhileDoElseNode(const WhileDoElseNode&) = delete;
+  WhileDoElseNode& operator=(const WhileDoElseNode&) = delete;
+  WhileDoElseNode(WhileDoElseNode&&) = delete;
+  WhileDoElseNode& operator=(WhileDoElseNode&&) = delete;
 
   virtual void halt() override;
 

@@ -1,4 +1,4 @@
-/*  Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -12,10 +12,11 @@
 
 #pragma once
 
-#include <list>
-#include <mutex>
 #include "behaviortree_cpp/action_node.h"
 #include "behaviortree_cpp/decorator_node.h"
+
+#include <list>
+#include <mutex>
 
 /**
  * Template Action used in ex04_waypoints.cpp example.
@@ -71,18 +72,12 @@ public:
       {
         return NodeStatus::FAILURE;
       }
-      else
-      {
-        T val = items.front();
-        items.pop_front();
-        setOutput("popped_item", val);
-        return NodeStatus::SUCCESS;
-      }
+      T val = items.front();
+      items.pop_front();
+      setOutput("popped_item", val);
+      return NodeStatus::SUCCESS;
     }
-    else
-    {
-      return NodeStatus::FAILURE;
-    }
+    return NodeStatus::FAILURE;
   }
 
   static PortsList providedPorts()
@@ -125,11 +120,8 @@ public:
       {
         return NodeStatus::FAILURE;
       }
-      else
-      {
-        setOutput("size", int(items.size()));
-        return NodeStatus::SUCCESS;
-      }
+      setOutput("size", int(items.size()));
+      return NodeStatus::SUCCESS;
     }
     return NodeStatus::FAILURE;
   }

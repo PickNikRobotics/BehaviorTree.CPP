@@ -15,14 +15,16 @@ enum class TimestampType
 class StatusChangeLogger
 {
 public:
+  /// Construct and immediately subscribe to status changes.
   StatusChangeLogger(TreeNode* root_node);
+
   virtual ~StatusChangeLogger() = default;
 
   StatusChangeLogger(const StatusChangeLogger& other) = delete;
   StatusChangeLogger& operator=(const StatusChangeLogger& other) = delete;
 
-  StatusChangeLogger(StatusChangeLogger&& other) = default;
-  StatusChangeLogger& operator=(StatusChangeLogger&& other) = default;
+  StatusChangeLogger(StatusChangeLogger&& other) = delete;
+  StatusChangeLogger& operator=(StatusChangeLogger&& other) = delete;
 
   virtual void callback(BT::Duration timestamp, const TreeNode& node,
                         NodeStatus prev_status, NodeStatus status) = 0;
@@ -55,11 +57,18 @@ public:
     show_transition_to_idle_ = enable;
   }
 
+protected:
+  /// Default constructor for deferred subscription. Call subscribeToTreeChanges() when ready.
+  StatusChangeLogger() = default;
+
+  /// Subscribe to status changes. Call at end of constructor for deferred subscription.
+  void subscribeToTreeChanges(TreeNode* root_node);
+
 private:
-  bool enabled_;
-  bool show_transition_to_idle_;
+  bool enabled_ = true;
+  bool show_transition_to_idle_ = true;
   std::vector<TreeNode::StatusChangeSubscriber> subscribers_;
-  TimestampType type_;
+  TimestampType type_ = TimestampType::absolute;
   BT::TimePoint first_timestamp_ = {};
   std::mutex callback_mutex_;
 };
@@ -67,23 +76,33 @@ private:
 //--------------------------------------------
 
 inline StatusChangeLogger::StatusChangeLogger(TreeNode* root_node)
-  : enabled_(true), show_transition_to_idle_(true), type_(TimestampType::absolute)
+{
+  subscribeToTreeChanges(root_node);
+}
+
+inline void StatusChangeLogger::subscribeToTreeChanges(TreeNode* root_node)
 {
   first_timestamp_ = std::chrono::high_resolution_clock::now();
 
   auto subscribeCallback = [this](TimePoint timestamp, const TreeNode& node,
                                   NodeStatus prev, NodeStatus status) {
-    std::unique_lock lk(callback_mutex_);
-    if(enabled_ && (status != NodeStatus::IDLE || show_transition_to_idle_))
+    // Copy state under lock, then release before calling user code
+    // This prevents recursive mutex locking when multiple nodes change status
+    bool should_callback = false;
+    Duration adjusted_timestamp;
     {
-      if(type_ == TimestampType::absolute)
+      std::unique_lock lk(callback_mutex_);
+      if(enabled_ && (status != NodeStatus::IDLE || show_transition_to_idle_))
       {
-        this->callback(timestamp.time_since_epoch(), node, prev, status);
+        should_callback = true;
+        adjusted_timestamp = (type_ == TimestampType::absolute) ?
+                                 timestamp.time_since_epoch() :
+                                 (timestamp - first_timestamp_);
       }
-      else
-      {
-        this->callback(timestamp - first_timestamp_, node, prev, status);
-      }
+    }
+    if(should_callback)
+    {
+      this->callback(adjusted_timestamp, node, prev, status);
     }
   };
 

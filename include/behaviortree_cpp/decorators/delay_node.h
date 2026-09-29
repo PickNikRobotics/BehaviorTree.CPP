@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018-2023 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2018-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -14,6 +14,7 @@
 
 #include "behaviortree_cpp/decorator_node.h"
 #include "behaviortree_cpp/utils/timer_queue.h"
+
 #include <atomic>
 
 namespace BT
@@ -43,6 +44,11 @@ public:
     halt();
   }
 
+  DelayNode(const DelayNode&) = delete;
+  DelayNode& operator=(const DelayNode&) = delete;
+  DelayNode(DelayNode&&) = delete;
+  DelayNode& operator=(DelayNode&&) = delete;
+
   static PortsList providedPorts()
   {
     return { InputPort<unsigned>("delay_msec", "Tick the child after a few "
@@ -61,7 +67,7 @@ private:
   std::atomic_bool delay_complete_ = false;
   bool delay_aborted_ = false;
   unsigned msec_;
-  bool read_parameter_from_ports_ = false;
+  bool read_parameter_from_ports_;
   std::mutex delay_mutex_;
 };
 

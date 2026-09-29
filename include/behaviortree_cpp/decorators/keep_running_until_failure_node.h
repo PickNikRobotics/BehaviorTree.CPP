@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018-2020 Davide Faconti, Eurecat -  All Rights Reserved
+/*  Copyright (C) 2018-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *   Copyright (C) 2020 Francisco Martin, Intelligent Robotics Lab (URJC) <fmrico@gmail.com>
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -18,7 +18,14 @@
 namespace BT
 {
 /**
- * @brief The KeepRunningUntilFailureNode returns always FAILURE or RUNNING.
+ * @brief The KeepRunningUntilFailureNode keeps ticking the child as long
+ * as it returns SUCCESS, and returns RUNNING.
+ *
+ * - If the child returns SUCCESS, reset the child and return RUNNING.
+ * - If the child returns RUNNING, return RUNNING.
+ * - If the child returns FAILURE, return FAILURE.
+ *
+ * This creates an infinite loop that stops only when the child fails.
  */
 class KeepRunningUntilFailureNode : public DecoratorNode
 {

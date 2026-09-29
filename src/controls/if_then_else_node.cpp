@@ -1,4 +1,4 @@
-/* Copyright (C) 2020 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2020-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -39,13 +39,13 @@ NodeStatus IfThenElseNode::tick()
 
   if(child_idx_ == 0)
   {
-    NodeStatus condition_status = children_nodes_[0]->executeTick();
+    const NodeStatus condition_status = children_nodes_[0]->executeTick();
 
     if(condition_status == NodeStatus::RUNNING)
     {
       return condition_status;
     }
-    else if(condition_status == NodeStatus::SUCCESS)
+    if(condition_status == NodeStatus::SUCCESS)
     {
       child_idx_ = 1;
     }
@@ -64,17 +64,14 @@ NodeStatus IfThenElseNode::tick()
   // not an else
   if(child_idx_ > 0)
   {
-    NodeStatus status = children_nodes_[child_idx_]->executeTick();
+    const NodeStatus status = children_nodes_[child_idx_]->executeTick();
     if(status == NodeStatus::RUNNING)
     {
       return NodeStatus::RUNNING;
     }
-    else
-    {
-      resetChildren();
-      child_idx_ = 0;
-      return status;
-    }
+    resetChildren();
+    child_idx_ = 0;
+    return status;
   }
 
   throw std::logic_error("Something unexpected happened in IfThenElseNode");

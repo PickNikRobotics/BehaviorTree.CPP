@@ -1,4 +1,4 @@
-/* Copyright (C) 2020-2022 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2020-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -36,7 +36,12 @@ class IfThenElseNode : public ControlNode
 public:
   IfThenElseNode(const std::string& name);
 
-  virtual ~IfThenElseNode() override = default;
+  ~IfThenElseNode() override = default;
+
+  IfThenElseNode(const IfThenElseNode&) = delete;
+  IfThenElseNode& operator=(const IfThenElseNode&) = delete;
+  IfThenElseNode(IfThenElseNode&&) = delete;
+  IfThenElseNode& operator=(IfThenElseNode&&) = delete;
 
   virtual void halt() override;
 

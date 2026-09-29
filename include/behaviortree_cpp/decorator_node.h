@@ -5,6 +5,16 @@
 
 namespace BT
 {
+/**
+ * @brief The DecoratorNode is the base class for nodes that have exactly one child.
+ *
+ * DecoratorNodes modify the behavior of their child in some way.
+ * They may:
+ * - Transform the result received from the child (e.g., Inverter)
+ * - Control when or how many times the child is ticked (e.g., Repeat, Retry)
+ * - Add timing constraints (e.g., Timeout, Delay)
+ * - Conditionally execute the child (e.g., Precondition)
+ */
 class DecoratorNode : public TreeNode
 {
 protected:
@@ -13,7 +23,12 @@ protected:
 public:
   DecoratorNode(const std::string& name, const NodeConfig& config);
 
-  virtual ~DecoratorNode() override = default;
+  ~DecoratorNode() override = default;
+
+  DecoratorNode(const DecoratorNode&) = delete;
+  DecoratorNode& operator=(const DecoratorNode&) = delete;
+  DecoratorNode(DecoratorNode&&) = delete;
+  DecoratorNode& operator=(DecoratorNode&&) = delete;
 
   void setChild(TreeNode* child);
 
@@ -59,6 +74,11 @@ public:
                       const NodeConfig& config);
 
   ~SimpleDecoratorNode() override = default;
+
+  SimpleDecoratorNode(const SimpleDecoratorNode&) = delete;
+  SimpleDecoratorNode& operator=(const SimpleDecoratorNode&) = delete;
+  SimpleDecoratorNode(SimpleDecoratorNode&&) = delete;
+  SimpleDecoratorNode& operator=(SimpleDecoratorNode&&) = delete;
 
 protected:
   virtual NodeStatus tick() override;

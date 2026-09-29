@@ -1,15 +1,16 @@
 #pragma once
 
-#include <cstdint>
-#include <array>
-#include <cstring>
-#include <stdexcept>
-#include <random>
-#include <memory>
-#include <condition_variable>
-#include <mutex>
 #include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/contrib/json.hpp"
+
+#include <array>
+#include <condition_variable>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <mutex>
+#include <random>
+#include <stdexcept>
 
 namespace BT::Monitor
 {
@@ -132,16 +133,11 @@ struct RequestHeader
 struct ReplyHeader
 {
   RequestHeader request;
-  TreeUniqueUUID tree_id;
+  TreeUniqueUUID tree_id = {};
 
   static size_t size()
   {
     return RequestHeader::size() + 16;
-  }
-
-  ReplyHeader()
-  {
-    tree_id.fill(0);
   }
 };
 
@@ -155,7 +151,7 @@ inline unsigned Serialize(char* buffer, unsigned offset, T value)
 template <typename T>
 inline unsigned Deserialize(const char* buffer, unsigned offset, T& value)
 {
-  memcpy(reinterpret_cast<char*>(&value), buffer + offset, sizeof(T));
+  memcpy(&value, buffer + offset, sizeof(T));
   return sizeof(T);
 }
 
@@ -186,7 +182,7 @@ inline RequestHeader DeserializeRequestHeader(const std::string& buffer)
   RequestHeader header;
   unsigned offset = 0;
   offset += Deserialize(buffer.data(), offset, header.protocol);
-  uint8_t type;
+  uint8_t type = 0;
   offset += Deserialize(buffer.data(), offset, type);
   header.type = static_cast<Monitor::RequestType>(type);
   offset += Deserialize(buffer.data(), offset, header.unique_id);

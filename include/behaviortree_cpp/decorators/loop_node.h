@@ -1,4 +1,4 @@
-/*  Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -12,8 +12,10 @@
 
 #pragma once
 
-#include <deque>
 #include "behaviortree_cpp/decorator_node.h"
+
+#include <deque>
+#include <vector>
 
 namespace BT
 {
@@ -74,7 +76,56 @@ public:
           static_queue_ ? AnyPtrLocked() : getLockedPortContent("queue");
       if(any_ref)
       {
-        current_queue_ = any_ref.get()->cast<SharedQueue<T>>();
+        // Try SharedQueue<T> first, then fall back to std::vector<T>.
+        // This allows upstream nodes that output vector<T> to be used
+        // directly with LoopNode without manual conversion. Issue #969.
+        auto queue_result = any_ref.get()->tryCast<SharedQueue<T>>();
+        if(queue_result)
+        {
+          current_queue_ = queue_result.value();
+        }
+        else if(!current_queue_)
+        {
+          // Only convert on first read; after that, use the
+          // already-converted current_queue_ (which gets popped).
+          auto vec_result = any_ref.get()->tryCast<std::vector<T>>();
+          if(vec_result)
+          {
+            // Accept std::vector<T> from upstream nodes. Issue #969.
+            const auto& vec = vec_result.value();
+            current_queue_ = std::make_shared<std::deque<T>>(vec.begin(), vec.end());
+          }
+          else if(auto any_vec_result = any_ref.get()->tryCast<std::vector<BT::Any>>())
+          {
+            // Fork divergence: setOutput<std::vector<T>>() stores vectors as
+            // std::vector<BT::Any>, so neither of the casts above matches. Unwrap
+            // each element back to T.
+            auto queue = std::make_shared<std::deque<T>>();
+            for(const auto& element : any_vec_result.value())
+            {
+              auto element_result = element.tryCast<T>();
+              if(!element_result)
+              {
+                throw RuntimeError("LoopNode: port 'queue' holds a vector<Any> whose "
+                                   "element cannot be cast to the loop type: ",
+                                   element_result.error());
+              }
+              queue->push_back(element_result.value());
+            }
+            current_queue_ = std::move(queue);
+          }
+          else if(any_ref.get()->isString())
+          {
+            // Accept string values (e.g. from subtree remapping). Issue #1065.
+            auto str = any_ref.get()->cast<std::string>();
+            current_queue_ = convertFromString<SharedQueue<T>>(str);
+          }
+          else
+          {
+            throw RuntimeError("LoopNode: port 'queue' must contain either "
+                               "SharedQueue<T>, std::vector<T>, or a string");
+          }
+        }
       }
 
       if(current_queue_ && !current_queue_->empty())
@@ -113,8 +164,9 @@ public:
 
   static PortsList providedPorts()
   {
-    // we mark "queue" as BidirectionalPort, because the original element is modified
-    return { BidirectionalPort<SharedQueue<T>>("queue"),
+    // Use an untyped BidirectionalPort to accept both SharedQueue<T>
+    // and std::vector<T> without triggering a port type mismatch. Issue #969.
+    return { BidirectionalPort("queue"),
              InputPort<NodeStatus>("if_empty", NodeStatus::SUCCESS,
                                    "Status to return if queue is empty: "
                                    "SUCCESS, FAILURE, SKIPPED"),

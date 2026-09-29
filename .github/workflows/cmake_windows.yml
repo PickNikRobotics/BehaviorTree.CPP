@@ -7,23 +7,23 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     runs-on: ${{ matrix.os }}
     strategy:
+      # Without this, a failing Debug job cancels Release mid-build and hides
+      # whatever it would have reported.
+      fail-fast: false
       matrix:
         os: [windows-latest]
+        build_type: [Release, Debug]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install Conan
       id: conan
@@ -32,32 +32,27 @@ jobs:
     - name: Create default profile
       run: conan profile detect
 
-    - name: Create Build Environment
-      # Some projects don't allow in-source building, so create a separate build directory
-      # We'll use this as our working directory for all subsequent commands
-      run: cmake -E make_directory ${{github.workspace}}/build
-
     - name: Install conan dependencies
-      working-directory: ${{github.workspace}}/build
       # encryption=tweetnacl swaps zeromq's default libsodium dependency for the
       # copy bundled in libzmq. CURVE support is unchanged; what goes away is the
       # only conan package in this graph built by msbuild instead of cmake.
       # libsodium's hand-written .vcxproj gets PlatformToolset v145 from
       # compiler.version=195 while vcvars lands on VCToolsVersion 14.44, and
-      # msbuild rejects the pair (MSB8052). Every cmake-built dependency is fine
-      # with the Visual Studio 18 2026 generator.
-      run: conan install ${{github.workspace}}/conanfile.txt -s build_type=${{env.BUILD_TYPE}} -o "zeromq/*:encryption=tweetnacl" --build=missing
+      # msbuild rejects the pair (MSB8052).
+      run: conan install conanfile.py -s build_type=${{ matrix.build_type }} -o "zeromq/*:encryption=tweetnacl" --build=missing --settings:host compiler.cppstd=17
+
+    - name: Normalize build type
+      shell: bash
+      run: echo "BUILD_TYPE_LOWERCASE=$(echo "${{ matrix.build_type }}" | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{github.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake
+      run: cmake --preset conan-default
 
     - name: Build
-      working-directory: ${{github.workspace}}/build
       shell: bash
-      run: cmake --build . --config ${{env.BUILD_TYPE}}
+      run: cmake --build --preset conan-${{ env.BUILD_TYPE_LOWERCASE }}
 
-    - name: run test (Windows)
-      working-directory: ${{github.workspace}}/build
-      run: $env:PATH+=";${{env.BUILD_TYPE}}"; tests/${{env.BUILD_TYPE}}/behaviortree_cpp_picknik_test.exe
+    - name: Run tests
+      working-directory: ${{ github.workspace }}/build
+      run: $env:PATH+=";${{ matrix.build_type }}"; tests/${{ matrix.build_type }}/behaviortree_cpp_picknik_test.exe

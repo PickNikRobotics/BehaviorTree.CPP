@@ -1,4 +1,4 @@
-/* Copyright (C) 2020-2022 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2020-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -52,14 +52,19 @@ class SwitchNode : public ControlNode
 public:
   SwitchNode(const std::string& name, const BT::NodeConfig& config);
 
-  virtual ~SwitchNode() override = default;
+  ~SwitchNode() override = default;
+
+  SwitchNode(const SwitchNode&) = delete;
+  SwitchNode& operator=(const SwitchNode&) = delete;
+  SwitchNode(SwitchNode&&) = delete;
+  SwitchNode& operator=(SwitchNode&&) = delete;
 
   void halt() override;
 
   static PortsList providedPorts();
 
 private:
-  int running_child_;
+  int running_child_ = -1;
   std::vector<std::string> case_keys_;
   virtual BT::NodeStatus tick() override;
 };
@@ -70,7 +75,7 @@ private:
 template <size_t NUM_CASES>
 inline SwitchNode<NUM_CASES>::SwitchNode(const std::string& name,
                                          const NodeConfig& config)
-  : ControlNode::ControlNode(name, config), running_child_(-1)
+  : ControlNode::ControlNode(name, config)
 {
   setRegistrationID("Switch");
   for(unsigned i = 1; i <= NUM_CASES; i++)

@@ -1,8 +1,11 @@
-#include <gtest/gtest.h>
-#include <string>
+#include "test_helper.hpp"
+
 #include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/bt_factory.h"
-#include "test_helper.hpp"
+
+#include <string>
+
+#include <gtest/gtest.h>
 
 using namespace BT;
 
@@ -28,7 +31,7 @@ const std::string xml_text_check = R"(
 TEST(EntryUpdates, NoEntry)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -52,7 +55,7 @@ TEST(EntryUpdates, NoEntry)
 TEST(EntryUpdates, Initialized)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -77,7 +80,7 @@ TEST(EntryUpdates, Initialized)
 TEST(EntryUpdates, UpdateOnce)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -104,7 +107,7 @@ TEST(EntryUpdates, UpdateOnce)
 TEST(EntryUpdates, UpdateTwice)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(

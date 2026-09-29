@@ -1,5 +1,5 @@
 /* Copyright (C) 2015-2018 Michele Colledanchise -  All Rights Reserved
-*  Copyright (C) 2018-2023 Davide Faconti -  All Rights Reserved
+*  Copyright (C) 2018-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -13,16 +13,17 @@
 
 #pragma once
 
+#include "behaviortree_cpp/basic_types.h"
+#include "behaviortree_cpp/blackboard.h"
+#include "behaviortree_cpp/scripting/script_parser.hpp"
+#include "behaviortree_cpp/utils/signal.h"
+#include "behaviortree_cpp/utils/strcat.hpp"
+#include "behaviortree_cpp/utils/wakeup_signal.hpp"
+
+#include <charconv>
 #include <exception>
 #include <map>
 #include <utility>
-
-#include "behaviortree_cpp/utils/signal.h"
-#include "behaviortree_cpp/basic_types.h"
-#include "behaviortree_cpp/blackboard.h"
-#include "behaviortree_cpp/utils/strcat.hpp"
-#include "behaviortree_cpp/utils/wakeup_signal.hpp"
-#include "behaviortree_cpp/scripting/script_parser.hpp"
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4127)
@@ -42,9 +43,30 @@ struct TreeNodeManifest
 using PortsRemapping = std::unordered_map<std::string, std::string>;
 using NonPortAttributes = std::unordered_map<std::string, std::string>;
 
+/**
+ * @brief Pre-conditions that can be attached to any node via XML attributes.
+ *
+ * Pre-conditions are evaluated in the order defined by this enum (FAILURE_IF first,
+ * then SUCCESS_IF, then SKIP_IF, then WHILE_TRUE).
+ *
+ * **Important**: FAILURE_IF, SUCCESS_IF, and SKIP_IF are evaluated **only once**
+ * when the node transitions from IDLE (or SKIPPED) to another state.
+ * They are NOT re-evaluated while the node is RUNNING.
+ *
+ * - `_failureIf="<script>"`: If true when node is IDLE, return FAILURE immediately (node's tick() is not called).
+ * - `_successIf="<script>"`: If true when node is IDLE, return SUCCESS immediately (node's tick() is not called).
+ * - `_skipIf="<script>"`: If true when node is IDLE, return SKIPPED immediately (node's tick() is not called).
+ * - `_while="<script>"`: Checked both on IDLE and RUNNING states.
+ *
+ *   If false when IDLE, return SKIPPED. If false when RUNNING, halt the node
+ *   and return SKIPPED. This is the only pre-condition that can interrupt
+ *   a running node.
+ *
+ * If you need a condition to be re-evaluated on every tick, use the
+ * `<Precondition>` decorator node with `else="RUNNING"` instead of these attributes.
+ */
 enum class PreCond
 {
-  // order of the enums also tell us the execution order
   FAILURE_IF = 0,
   SUCCESS_IF,
   SKIP_IF,
@@ -91,8 +113,6 @@ struct NodeConfig
   PortsRemapping input_ports;
   // output ports
   PortsRemapping output_ports;
-  // If missing port fields are automatically remapped (only relevant for subtrees).
-  bool auto_remapped = false;
 
   // Any other attributes found in the xml that are not parsed as ports
   // or built-in identifier (e.g. anything with a leading '_')
@@ -110,6 +130,13 @@ struct NodeConfig
 
   std::map<PreCond, std::string> pre_conditions;
   std::map<PostCond, std::string> post_conditions;
+
+  // ABI: new members MUST be appended here, at the end of the struct.
+  // getInput<T>() is header-inlined into callers and dereferences config().manifest;
+  // inserting a member mid-struct shifts every following offset and makes binaries
+  // built against stock headers read garbage (see moveit_pro#20928).
+  // If missing port fields are automatically remapped (only relevant for subtrees).
+  bool auto_remapped = false;
 };
 
 // back compatibility
@@ -408,9 +435,9 @@ public:
     }
     else if constexpr(hasNodeNameCtor<DerivedT>())
     {
-      auto node_ptr = new DerivedT(name, args...);
+      auto node_ptr = std::make_unique<DerivedT>(name, args...);
       node_ptr->config() = config;
-      return std::unique_ptr<DerivedT>(node_ptr);
+      return node_ptr;
     }
   }
 
@@ -470,17 +497,25 @@ T TreeNode::parseString(const std::string& str) const
 {
   if constexpr(std::is_enum_v<T> && !std::is_same_v<T, NodeStatus>)
   {
-    auto it = config().enums->find(str);
-    // conversion available
-    if(it != config().enums->end())
+    // Check the ScriptingEnumsRegistry first, if available.
+    if(config().enums)
     {
-      return static_cast<T>(it->second);
+      auto it = config().enums->find(str);
+      if(it != config().enums->end())
+      {
+        return static_cast<T>(it->second);
+      }
     }
-    else
+    // Try numeric conversion (e.g. "2" for an enum value).
+    int tmp = 0;
+    auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), tmp);
+    if(ec == std::errc() && ptr == str.data() + str.size())
     {
-      // hopefully str contains a number that can be parsed. May throw
-      return static_cast<T>(convertFromString<int>(str));
+      return static_cast<T>(tmp);
     }
+    // Fall back to convertFromString<T>, which uses a user-provided
+    // specialization if one exists. Issue #948.
+    return convertFromString<T>(str);
   }
   return convertFromString<T>(str);
 }
@@ -537,6 +572,27 @@ TreeNode::getInputStampedWithDiagnostic(const std::string& key, T& destination) 
     }
   }
 
+  // Helper lambda to parse string using the stored converter if available,
+  // otherwise fall back to convertFromString<T>. This fixes the plugin issue
+  // where convertFromString<T> specializations are not visible across shared
+  // library boundaries (issue #953).
+  auto parseStringWithConverter = [this, &key](const std::string& str) -> T {
+    if(config().manifest)
+    {
+      auto port_it = config().manifest->ports.find(key);
+      if(port_it != config().manifest->ports.end())
+      {
+        const auto& converter = port_it->second.converter();
+        if(converter)
+        {
+          return converter(str).template cast<T>();
+        }
+      }
+    }
+    // Fall back to parseString which calls convertFromString
+    return parseString<T>(str);
+  };
+
   auto blackboard_ptr = getRemappedKey(key, port_value_str);
   try
   {
@@ -545,7 +601,7 @@ TreeNode::getInputStampedWithDiagnostic(const std::string& key, T& destination) 
     {
       try
       {
-        destination = parseString<T>(port_value_str);
+        destination = parseStringWithConverter(port_value_str);
       }
       catch(std::exception& ex)
       {
@@ -609,11 +665,17 @@ TreeNode::getInputStampedWithDiagnostic(const std::string& key, T& destination) 
         }
         if(!std::is_same_v<T, std::string> && any_value.isString())
         {
-          destination = parseString<T>(any_value.cast<std::string>());
+          destination = parseStringWithConverter(any_value.cast<std::string>());
         }
         else
         {
-          destination = any_value.cast<T>();
+          auto result =
+              config().blackboard->tryCastWithPolymorphicFallback<T>(&any_value);
+          if(!result)
+          {
+            throw std::runtime_error(result.error());
+          }
+          destination = result.value();
         }
         return Timestamp{ entry->sequence_id, entry->stamp };
       }

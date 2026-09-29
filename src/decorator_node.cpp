@@ -1,5 +1,5 @@
 /* Copyright (C) 2015-2017 Michele Colledanchise - All Rights Reserved
- * Copyright (C) 2018-2020 Davide Faconti, Eurecat -  All Rights Reserved
+ * Copyright (C) 2018-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -21,7 +21,7 @@ DecoratorNode::DecoratorNode(const std::string& name, const NodeConfig& config)
 
 void DecoratorNode::setChild(TreeNode* child)
 {
-  if(child_node_)
+  if(child_node_ != nullptr)
   {
     throw BehaviorTreeException("Decorator [", name(), "] has already a child assigned");
   }
@@ -52,7 +52,7 @@ void DecoratorNode::haltChild()
 
 void DecoratorNode::resetChild()
 {
-  if(!child_node_)
+  if(child_node_ == nullptr)
   {
     return;
   }
@@ -76,8 +76,8 @@ NodeStatus SimpleDecoratorNode::tick()
 
 NodeStatus DecoratorNode::executeTick()
 {
-  NodeStatus status = TreeNode::executeTick();
-  NodeStatus child_status = child()->status();
+  const NodeStatus status = TreeNode::executeTick();
+  const NodeStatus child_status = child()->status();
   if(child_status == NodeStatus::SUCCESS || child_status == NodeStatus::FAILURE)
   {
     child()->resetStatus();

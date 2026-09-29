@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -16,20 +16,33 @@
 #include <charconv>
 #endif
 
+#include "behaviortree_cpp/contrib/any.hpp"
+#include "behaviortree_cpp/contrib/expected.hpp"
+#include "behaviortree_cpp/utils/convert_impl.hpp"
+#include "behaviortree_cpp/utils/demangle_util.h"
+#include "behaviortree_cpp/utils/polymorphic_cast_registry.hpp"
+#include "behaviortree_cpp/utils/strcat.hpp"
+
+#include <memory>
 #include <string>
 #include <type_traits>
 #include <typeindex>
-
-#include "behaviortree_cpp/contrib/any.hpp"
-#include "behaviortree_cpp/contrib/expected.hpp"
-#include "behaviortree_cpp/utils/demangle_util.h"
-#include "behaviortree_cpp/utils/convert_impl.hpp"
-#include "behaviortree_cpp/utils/strcat.hpp"
 
 namespace BT
 {
 
 static std::type_index UndefinedAnyType = typeid(nullptr);
+
+// Trait to detect std::shared_ptr types (used for polymorphic port support)
+template <typename T>
+struct is_shared_ptr : std::false_type
+{
+};
+
+template <typename U>
+struct is_shared_ptr<std::shared_ptr<U>> : std::true_type
+{
+};
 
 // Rational: since type erased numbers will always use at least 8 bytes
 // it is faster to cast everything to either double, uint64_t or int64_t.
@@ -70,7 +83,8 @@ public:
   Any(const Any& other) : _any(other._any), _original_type(other._original_type)
   {}
 
-  Any(Any&& other) : _any(std::move(other._any)), _original_type(other._original_type)
+  Any(Any&& other) noexcept
+    : _any(std::move(other._any)), _original_type(other._original_type)
   {}
 
   explicit Any(const double& value) : _any(value), _original_type(typeid(double))
@@ -117,6 +131,8 @@ public:
 
   Any& operator=(const Any& other);
 
+  Any& operator=(Any&& other) noexcept;
+
   [[nodiscard]] bool isNumber() const;
 
   [[nodiscard]] bool isIntegral() const;
@@ -141,6 +157,12 @@ public:
   template <typename T>
   nonstd::expected<T, std::string> tryCast() const;
 
+  // tryCast with polymorphic registry support (Issue #943)
+  // Attempts polymorphic cast for shared_ptr types using the provided registry.
+  template <typename T>
+  nonstd::expected<T, std::string>
+  tryCastWithRegistry(const PolymorphicCastRegistry& registry) const;
+
   // same as tryCast, but throws if fails
   template <typename T>
   [[nodiscard]] T cast() const
@@ -162,32 +184,7 @@ public:
   [[nodiscard]] T* castPtr()
   {
     static_assert(!std::is_same_v<T, float>, "The value has been casted internally to "
-                                             "[double]. "
-                                             "Use that instead");
-    static_assert(!SafeAny::details::is_integer<T>() || std::is_same_v<T, uint64_t>, "The"
-                                                                                     " va"
-                                                                                     "lue"
-                                                                                     " ha"
-                                                                                     "s "
-                                                                                     "bee"
-                                                                                     "n "
-                                                                                     "cas"
-                                                                                     "ted"
-                                                                                     " in"
-                                                                                     "ter"
-                                                                                     "nal"
-                                                                                     "ly "
-                                                                                     "to "
-                                                                                     "[in"
-                                                                                     "t64"
-                                                                                     "_t]"
-                                                                                     ". "
-                                                                                     "Use"
-                                                                                     " th"
-                                                                                     "at "
-                                                                                     "ins"
-                                                                                     "tea"
-                                                                                     "d");
+                                             "[double]. Use that instead");
 
     return _any.empty() ? nullptr : linb::any_cast<T>(&_any);
   }
@@ -330,7 +327,17 @@ inline bool isCastingSafe(const std::type_index& type, const T& val)
 
 inline Any& Any::operator=(const Any& other)
 {
-  this->_any = other._any;
+  if(this != &other)
+  {
+    this->_any = other._any;
+    this->_original_type = other._original_type;
+  }
+  return *this;
+}
+
+inline Any& Any::operator=(Any&& other) noexcept
+{
+  this->_any = std::move(other._any);
   this->_original_type = other._original_type;
   return *this;
 }
@@ -559,6 +566,37 @@ inline nonstd::expected<T, std::string> Any::tryCast() const
   {
     return res;
   }
+}
+
+template <typename T>
+inline nonstd::expected<T, std::string>
+Any::tryCastWithRegistry(const PolymorphicCastRegistry& registry) const
+{
+  static_assert(is_shared_ptr<T>::value, "tryCastWithRegistry only works with shared_ptr "
+                                         "types");
+
+  if(_any.empty())
+  {
+    return nonstd::make_unexpected("Any::tryCastWithRegistry failed: empty value");
+  }
+
+  // Try to cast using the registry
+  auto result = registry.tryCast(_any, _original_type, typeid(T));
+  if(result)
+  {
+    try
+    {
+      return linb::any_cast<T>(result.value());
+    }
+    catch(const std::exception& e)
+    {
+      return nonstd::make_unexpected(StrCat("Polymorphic cast failed: ", e.what()));
+    }
+  }
+
+  return nonstd::make_unexpected(StrCat("[Any::tryCastWithRegistry]: ", result.error(),
+                                        " (from [", demangle(_original_type), "] to [",
+                                        demangle(typeid(T)), "])"));
 }
 
 }  // end namespace BT

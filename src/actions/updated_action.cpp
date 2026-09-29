@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Davide Faconti -  All Rights Reserved
+/* Copyright (C) 2024-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -11,6 +11,7 @@
 */
 
 #include "behaviortree_cpp/actions/updated_action.h"
+
 #include "behaviortree_cpp/bt_factory.h"
 
 namespace BT
@@ -40,7 +41,7 @@ NodeStatus EntryUpdatedAction::tick()
 {
   if(auto entry = config().blackboard->getEntry(entry_key_))
   {
-    std::unique_lock lk(entry->entry_mutex);
+    const std::unique_lock lk(entry->entry_mutex);
     const uint64_t current_id = entry->sequence_id;
     const uint64_t previous_id = sequence_id_;
     sequence_id_ = current_id;

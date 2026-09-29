@@ -1,4 +1,4 @@
-/*  Copyright (C) 2022 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2022-2025 Davide Faconti -  All Rights Reserved
  *
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
@@ -14,8 +14,8 @@
 #pragma once
 
 #include "behaviortree_cpp/action_node.h"
-#include "behaviortree_cpp/utils/timer_queue.h"
 #include "behaviortree_cpp/scripting/script_parser.hpp"
+#include "behaviortree_cpp/utils/timer_queue.h"
 
 namespace BT
 {

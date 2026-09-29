@@ -1,12 +1,13 @@
 #pragma once
 
 #include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <thread>
-#include <queue>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
+#include <mutex>
+#include <queue>
+#include <thread>
+
 #include <assert.h>
 
 namespace BT
@@ -23,10 +24,7 @@ public:
 
   void notify()
   {
-    {
-      std::lock_guard<std::mutex> lock(m_mtx);
-      m_count++;
-    }
+    m_count.fetch_add(1);
     m_cv.notify_one();
   }
 
@@ -38,8 +36,15 @@ public:
     {
       return false;
     }
-    m_count--;
+    // Only decrement if there is a real count. If we woke because of manualUnlock,
+    // m_count may be zero and we must not decrement it.
+    if(m_count > 0)
+    {
+      m_count.fetch_sub(1);
+    }
+    // Clear the manual unlock flag
     m_unlock = false;
+
     return true;
   }
 
@@ -52,7 +57,7 @@ public:
 private:
   std::mutex m_mtx;
   std::condition_variable m_cv;
-  unsigned m_count = 0;
+  std::atomic_uint m_count = 0;
   std::atomic_bool m_unlock = false;
 };
 }  // namespace details
@@ -67,22 +72,25 @@ private:
 //  - Handlers are ALWAYS executed in the Timer Queue worker thread.
 //  - Handlers execution order is NOT guaranteed
 //
-template <typename _Clock = std::chrono::steady_clock,
-          typename _Duration = std::chrono::steady_clock::duration>
+template <typename ClockT = std::chrono::steady_clock,
+          typename DurationT = std::chrono::steady_clock::duration>
 class TimerQueue
 {
 public:
   TimerQueue()
   {
-    m_th = std::thread([this] { run(); });
+    m_finish.store(false);
+    m_thread = std::thread([this]() { run(); });
   }
 
   ~TimerQueue()
   {
-    m_finish = true;
+    m_finish.store(true);
     cancelAll();
-    m_checkWork.manualUnlock();
-    m_th.join();
+    if(m_thread.joinable())
+    {
+      m_thread.join();
+    }
   }
 
   //! Adds a new timer
@@ -92,7 +100,7 @@ public:
   uint64_t add(std::chrono::milliseconds milliseconds, std::function<void(bool)> handler)
   {
     WorkItem item;
-    item.end = _Clock::now() + milliseconds;
+    item.end = ClockT::now() + milliseconds;
     item.handler = std::move(handler);
 
     std::unique_lock<std::mutex> lk(m_mtx);
@@ -125,7 +133,7 @@ public:
       {
         WorkItem newItem;
         // Zero time, so it stays at the top for immediate execution
-        newItem.end = std::chrono::time_point<_Clock, _Duration>();
+        newItem.end = std::chrono::time_point<ClockT, DurationT>();
         newItem.id = 0;  // Means it is a canceled item
         // Move the handler from item to newItem.
         // Also, we need to manually set the handler to nullptr, since
@@ -157,7 +165,7 @@ public:
     {
       if(item.id)
       {
-        item.end = std::chrono::time_point<_Clock, _Duration>();
+        item.end = std::chrono::time_point<ClockT, DurationT>();
         item.id = 0;
       }
     }
@@ -168,13 +176,15 @@ public:
     return ret;
   }
 
-private:
   TimerQueue(const TimerQueue&) = delete;
   TimerQueue& operator=(const TimerQueue&) = delete;
+  TimerQueue(TimerQueue&&) = delete;
+  TimerQueue& operator=(TimerQueue&&) = delete;
 
+private:
   void run()
   {
-    while(!m_finish)
+    while(!m_finish.load())
     {
       auto end = calcWaitTime();
       if(end.first)
@@ -186,7 +196,7 @@ private:
       else
       {
         // No timers exist, so wait an arbitrary amount of time
-        m_checkWork.waitUntil(_Clock::now() + std::chrono::milliseconds(10));
+        m_checkWork.waitUntil(ClockT::now() + std::chrono::milliseconds(10));
       }
 
       // Check and execute as much work as possible, such as, all expired
@@ -199,7 +209,7 @@ private:
     assert(m_items.size() == 0);
   }
 
-  std::pair<bool, std::chrono::time_point<_Clock, _Duration>> calcWaitTime()
+  std::pair<bool, std::chrono::time_point<ClockT, DurationT>> calcWaitTime()
   {
     std::lock_guard<std::mutex> lk(m_mtx);
     while(m_items.size())
@@ -218,13 +228,13 @@ private:
 
     // No items found, so return no wait time (causes the thread to wait
     // indefinitely)
-    return std::make_pair(false, std::chrono::time_point<_Clock, _Duration>());
+    return std::make_pair(false, std::chrono::time_point<ClockT, DurationT>());
   }
 
   void checkWork()
   {
     std::unique_lock<std::mutex> lk(m_mtx);
-    while(m_items.size() && m_items.top().end <= _Clock::now())
+    while(m_items.size() && m_items.top().end <= ClockT::now())
     {
       WorkItem item(std::move(m_items.top()));
       m_items.pop();
@@ -239,14 +249,14 @@ private:
   }
 
   details::Semaphore m_checkWork;
-  std::thread m_th;
-  bool m_finish = false;
+  std::thread m_thread;
+  std::atomic_bool m_finish = false;
   uint64_t m_idcounter = 0;
 
   struct WorkItem
   {
-    std::chrono::time_point<_Clock, _Duration> end;
-    uint64_t id;  // id==0 means it was cancelled
+    std::chrono::time_point<ClockT, DurationT> end;
+    uint64_t id = 0;  // id==0 means it was cancelled
     std::function<void(bool)> handler;
     bool operator>(const WorkItem& other) const
     {

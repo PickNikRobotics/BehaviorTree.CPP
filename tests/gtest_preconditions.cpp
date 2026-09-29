@@ -1,15 +1,18 @@
-#include <gtest/gtest.h>
-#include <string>
+#include "test_helper.hpp"
+
 #include "behaviortree_cpp/basic_types.h"
 #include "behaviortree_cpp/bt_factory.h"
-#include "test_helper.hpp"
+
+#include <string>
+
+#include <gtest/gtest.h>
 
 using namespace BT;
 
 TEST(PreconditionsDecorator, Integers)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 3> counters;
+  std::array<int, 3> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -42,7 +45,7 @@ TEST(PreconditionsDecorator, Integers)
 TEST(PreconditionsDecorator, DoubleEquals)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 3> counters;
+  std::array<int, 3> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -78,7 +81,7 @@ TEST(PreconditionsDecorator, DoubleEquals)
 TEST(PreconditionsDecorator, StringEquals)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -169,7 +172,7 @@ TEST(PreconditionsDecorator, CanRunChildrenMultipleTimes)
 {
   BehaviorTreeFactory factory;
   factory.registerNodeType<KeepRunning>("KeepRunning");
-  std::array<int, 1> counters;
+  std::array<int, 1> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -215,7 +218,7 @@ TEST(PreconditionsDecorator, CanRunChildrenMultipleTimes)
 TEST(Preconditions, Basic)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 4> counters;
+  std::array<int, 4> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -246,7 +249,7 @@ TEST(Preconditions, Basic)
 TEST(Preconditions, Issue533)
 {
   BehaviorTreeFactory factory;
-  std::array<int, 3> counters;
+  std::array<int, 3> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   const std::string xml_text = R"(
@@ -427,7 +430,7 @@ TEST(Preconditions, Remapping)
 
   BehaviorTreeFactory factory;
 
-  std::array<int, 2> counters;
+  std::array<int, 2> counters{};
   factory.registerNodeType<SimpleOutput>("SimpleOutput");
   RegisterTestTick(factory, "Test", counters);
 

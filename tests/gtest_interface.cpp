@@ -1,12 +1,19 @@
-#include <gtest/gtest.h>
-
-#include <behaviortree_cpp/bt_factory.h>
 #include <iostream>
 #include <memory>
+
+#include <behaviortree_cpp/bt_factory.h>
+#include <gtest/gtest.h>
 
 // interface
 struct IMotor
 {
+  IMotor() = default;
+  virtual ~IMotor() = default;
+  IMotor(const IMotor&) = default;
+  IMotor& operator=(const IMotor&) = default;
+  IMotor(IMotor&&) = default;
+  IMotor& operator=(IMotor&&) = default;
+
   virtual void doMove() = 0;
 };
 
@@ -19,7 +26,9 @@ struct LinearMotor : public IMotor
   }
 };
 
-static const char* xml_text = R"(
+namespace
+{
+const char* xml_text = R"(
 <root BTCPP_format="4">
     <BehaviorTree ID="MainTree">
         <Sequence name="root_sequence">
@@ -28,6 +37,7 @@ static const char* xml_text = R"(
     </BehaviorTree>
 </root>
 )";
+}  // namespace
 
 // node using interface
 class PathFollow : public BT::StatefulActionNode

@@ -7,6 +7,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pixi_conda_build:
     strategy:
@@ -20,7 +24,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       # Pixi is the tool used to create/manage conda environment
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       # pixi.lock is format v7, which v0.40.3 cannot read.
       - uses: prefix-dev/setup-pixi@v0.10.1
         with:

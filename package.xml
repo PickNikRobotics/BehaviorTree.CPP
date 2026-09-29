@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="3">
   <name>behaviortree_cpp_picknik</name>
-  <version>4.7.2</version>
+  <version>4.9.0</version>
   <description>
   This package provides the Behavior Trees core library.
   </description>
@@ -22,9 +22,10 @@
 
   <depend>libsqlite3-dev</depend>
   <depend>libzmq3-dev</depend>
+  <depend>tinyxml2</depend>
+  <depend>tinyxml2_vendor</depend>
 
   <test_depend >ament_cmake_gtest</test_depend>
-  <test_depend >ament_cmake_gmock</test_depend>
 
   <export>
       <build_type >ament_cmake</build_type>

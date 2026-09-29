@@ -10,11 +10,13 @@
 *   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <gtest/gtest.h>
 #include "action_test_node.h"
 #include "condition_test_node.h"
-#include "behaviortree_cpp/bt_factory.h"
 #include "test_helper.hpp"
+
+#include "behaviortree_cpp/bt_factory.h"
+
+#include <gtest/gtest.h>
 
 using BT::NodeStatus;
 using std::chrono::milliseconds;
@@ -31,8 +33,11 @@ struct SimpleSequenceTest : testing::Test
     root.addChild(&condition);
     root.addChild(&action);
   }
-  ~SimpleSequenceTest() override
-  {}
+  ~SimpleSequenceTest() override = default;
+  SimpleSequenceTest(const SimpleSequenceTest&) = delete;
+  SimpleSequenceTest& operator=(const SimpleSequenceTest&) = delete;
+  SimpleSequenceTest(SimpleSequenceTest&&) = delete;
+  SimpleSequenceTest& operator=(SimpleSequenceTest&&) = delete;
 };
 
 struct ComplexSequenceTest : testing::Test
@@ -58,8 +63,11 @@ struct ComplexSequenceTest : testing::Test
     }
     root.addChild(&action_1);
   }
-  ~ComplexSequenceTest() override
-  {}
+  ~ComplexSequenceTest() override = default;
+  ComplexSequenceTest(const ComplexSequenceTest&) = delete;
+  ComplexSequenceTest& operator=(const ComplexSequenceTest&) = delete;
+  ComplexSequenceTest(ComplexSequenceTest&&) = delete;
+  ComplexSequenceTest& operator=(ComplexSequenceTest&&) = delete;
 };
 
 struct SequenceTripleActionTest : testing::Test
@@ -82,8 +90,11 @@ struct SequenceTripleActionTest : testing::Test
     root.addChild(&action_2);
     root.addChild(&action_3);
   }
-  ~SequenceTripleActionTest() override
-  {}
+  ~SequenceTripleActionTest() override = default;
+  SequenceTripleActionTest(const SequenceTripleActionTest&) = delete;
+  SequenceTripleActionTest& operator=(const SequenceTripleActionTest&) = delete;
+  SequenceTripleActionTest(SequenceTripleActionTest&&) = delete;
+  SequenceTripleActionTest& operator=(SequenceTripleActionTest&&) = delete;
 };
 
 struct ComplexSequence2ActionsTest : testing::Test
@@ -117,8 +128,11 @@ struct ComplexSequence2ActionsTest : testing::Test
       seq_2.addChild(&action_2);
     }
   }
-  ~ComplexSequence2ActionsTest() override
-  {}
+  ~ComplexSequence2ActionsTest() override = default;
+  ComplexSequence2ActionsTest(const ComplexSequence2ActionsTest&) = delete;
+  ComplexSequence2ActionsTest& operator=(const ComplexSequence2ActionsTest&) = delete;
+  ComplexSequence2ActionsTest(ComplexSequence2ActionsTest&&) = delete;
+  ComplexSequence2ActionsTest& operator=(ComplexSequence2ActionsTest&&) = delete;
 };
 
 struct SimpleSequenceWithMemoryTest : testing::Test
@@ -133,8 +147,11 @@ struct SimpleSequenceWithMemoryTest : testing::Test
     root.addChild(&condition);
     root.addChild(&action);
   }
-  ~SimpleSequenceWithMemoryTest() override
-  {}
+  ~SimpleSequenceWithMemoryTest() override = default;
+  SimpleSequenceWithMemoryTest(const SimpleSequenceWithMemoryTest&) = delete;
+  SimpleSequenceWithMemoryTest& operator=(const SimpleSequenceWithMemoryTest&) = delete;
+  SimpleSequenceWithMemoryTest(SimpleSequenceWithMemoryTest&&) = delete;
+  SimpleSequenceWithMemoryTest& operator=(SimpleSequenceWithMemoryTest&&) = delete;
 };
 
 struct ComplexSequenceWithMemoryTest : testing::Test
@@ -170,8 +187,11 @@ struct ComplexSequenceWithMemoryTest : testing::Test
       seq_actions.addChild(&action_2);
     }
   }
-  ~ComplexSequenceWithMemoryTest() override
-  {}
+  ~ComplexSequenceWithMemoryTest() override = default;
+  ComplexSequenceWithMemoryTest(const ComplexSequenceWithMemoryTest&) = delete;
+  ComplexSequenceWithMemoryTest& operator=(const ComplexSequenceWithMemoryTest&) = delete;
+  ComplexSequenceWithMemoryTest(ComplexSequenceWithMemoryTest&&) = delete;
+  ComplexSequenceWithMemoryTest& operator=(ComplexSequenceWithMemoryTest&&) = delete;
 };
 
 struct SimpleParallelTest : testing::Test
@@ -196,8 +216,11 @@ struct SimpleParallelTest : testing::Test
     root.addChild(&condition_2);
     root.addChild(&action_2);
   }
-  ~SimpleParallelTest() override
-  {}
+  ~SimpleParallelTest() override = default;
+  SimpleParallelTest(const SimpleParallelTest&) = delete;
+  SimpleParallelTest& operator=(const SimpleParallelTest&) = delete;
+  SimpleParallelTest(SimpleParallelTest&&) = delete;
+  SimpleParallelTest& operator=(SimpleParallelTest&&) = delete;
 };
 
 /****************TESTS START HERE***************************/
@@ -415,7 +438,7 @@ TEST(SequenceWithMemoryTest, Issue_636)
 
   BT::BehaviorTreeFactory factory;
 
-  std::array<int, 3> counters;
+  std::array<int, 3> counters{};
   RegisterTestTick(factory, "Test", counters);
 
   auto tree = factory.createTreeFromText(xml_text);

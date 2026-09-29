@@ -1,4 +1,5 @@
 #include "behaviortree_cpp/utils/shared_library.h"
+
 #include "behaviortree_cpp/exceptions.h"
 
 BT::SharedLibrary::SharedLibrary(const std::string& path, int flags)
@@ -9,10 +10,11 @@ BT::SharedLibrary::SharedLibrary(const std::string& path, int flags)
 void* BT::SharedLibrary::getSymbol(const std::string& name)
 {
   void* result = findSymbol(name);
-  if(result)
+  if(result != nullptr)
+  {
     return result;
-  else
-    throw RuntimeError("[SharedLibrary::getSymbol]: can't find symbol ", name);
+  }
+  throw RuntimeError("[SharedLibrary::getSymbol]: can't find symbol ", name);
 }
 
 bool BT::SharedLibrary::hasSymbol(const std::string& name)

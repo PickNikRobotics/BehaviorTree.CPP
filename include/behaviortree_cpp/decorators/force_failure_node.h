@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018-2020 Davide Faconti, Eurecat -  All Rights Reserved
+/*  Copyright (C) 2018-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -17,7 +17,11 @@
 namespace BT
 {
 /**
- * @brief The ForceFailureNode returns always FAILURE or RUNNING.
+ * @brief The ForceFailureNode always returns FAILURE when the child completes,
+ * regardless of whether the child returned SUCCESS or FAILURE.
+ *
+ * - If the child returns RUNNING, this node returns RUNNING.
+ * - If the child returns SUCCESS or FAILURE, this node returns FAILURE.
  */
 class ForceFailureNode : public DecoratorNode
 {

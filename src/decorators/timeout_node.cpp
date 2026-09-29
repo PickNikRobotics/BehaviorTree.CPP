@@ -1,4 +1,4 @@
-/*  Copyright (C) 2018-2023 Davide Faconti -  All Rights Reserved
+/*  Copyright (C) 2018-2025 Davide Faconti -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -41,7 +41,7 @@ NodeStatus TimeoutNode::tick()
         {
           return;
         }
-        std::unique_lock<std::mutex> lk(timeout_mutex_);
+        const std::unique_lock<std::mutex> lk(timeout_mutex_);
         if(child()->status() == NodeStatus::RUNNING)
         {
           child_halted_ = true;
@@ -59,19 +59,16 @@ NodeStatus TimeoutNode::tick()
     timeout_started_ = false;
     return NodeStatus::FAILURE;
   }
-  else
+  const NodeStatus child_status = child()->executeTick();
+  if(isStatusCompleted(child_status))
   {
-    const NodeStatus child_status = child()->executeTick();
-    if(isStatusCompleted(child_status))
-    {
-      timeout_started_ = false;
-      timeout_mutex_.unlock();
-      timer_.cancel(timer_id_);
-      timeout_mutex_.lock();
-      resetChild();
-    }
-    return child_status;
+    timeout_started_ = false;
+    lk.unlock();
+    timer_.cancel(timer_id_);
+    lk.lock();
+    resetChild();
   }
+  return child_status;
 }
 
 void TimeoutNode::halt()

@@ -1,4 +1,4 @@
-/* Copyright (C) 2022 Davide Faconti, Eurecat -  All Rights Reserved
+/* Copyright (C) 2022-2025 Davide Faconti, Eurecat -  All Rights Reserved
 *
 *   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
 *   to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -12,9 +12,10 @@
 
 #pragma once
 
-#include <type_traits>
-#include <cmath>
 #include "simple_string.hpp"
+
+#include <cmath>
+#include <type_traits>
 
 #undef max
 #undef min
@@ -154,12 +155,19 @@ void convertNumber(const SRC& source, DST& target)
       throw std::runtime_error("Value is negative and can't be converted to unsigned");
     }
   }
-  // these conversions are always safe:
+  // these conversions are always safe (no check needed):
   // - same type
   // - float -> double
-  if constexpr(is_same<SRC, DST>() || (is_same<SRC, float>() && is_same<DST, double>()))
+  // - floating point to bool (C-style: any non-zero is true)
+  if constexpr(is_same<SRC, DST>() || (is_same<SRC, float>() && is_same<DST, double>()) ||
+               (std::is_floating_point<SRC>::value && is_same<DST, bool>()))
   {
-    // No check needed
+    target = static_cast<DST>(source);
+  }
+  // integer to bool: only 0 and 1 are valid
+  else if constexpr(is_integer<SRC>() && is_same<DST, bool>())
+  {
+    checkLowerLimit<SRC, DST>(source);
     target = static_cast<DST>(source);
   }
   else if constexpr(both_integers)
@@ -177,11 +185,6 @@ void convertNumber(const SRC& source, DST& target)
       }
       checkUpperLimit<SRC, DST>(source);
     }
-    target = static_cast<DST>(source);
-  }
-  // special case: bool accept truncation
-  else if constexpr(is_convertible_to_bool<SRC>() && is_same<DST, bool>())
-  {
     target = static_cast<DST>(source);
   }
   // casting to/from floating points might cause truncation.

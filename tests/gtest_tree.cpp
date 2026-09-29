@@ -10,13 +10,15 @@
 *   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <gtest/gtest.h>
 #include "action_test_node.h"
 #include "condition_test_node.h"
+
 #include "behaviortree_cpp/behavior_tree.h"
 
 #include <sstream>
 #include <string>
+
+#include <gtest/gtest.h>
 
 using BT::NodeStatus;
 using std::chrono::milliseconds;
@@ -44,8 +46,11 @@ struct BehaviorTreeTest : testing::Test
     }
     root.addChild(&action_1);
   }
-  ~BehaviorTreeTest()
-  {}
+  ~BehaviorTreeTest() override = default;
+  BehaviorTreeTest(const BehaviorTreeTest&) = delete;
+  BehaviorTreeTest& operator=(const BehaviorTreeTest&) = delete;
+  BehaviorTreeTest(BehaviorTreeTest&&) = delete;
+  BehaviorTreeTest& operator=(BehaviorTreeTest&&) = delete;
 };
 
 /****************TESTS START HERE***************************/
@@ -86,7 +91,6 @@ TEST_F(BehaviorTreeTest, PrintWithStream)
   // verify value for with custom stream parameter
   std::stringstream stream;
   BT::printTreeRecursively(&root, stream);
-  const auto string = stream.str();
   std::string line;
 
   // first line is all dashes
