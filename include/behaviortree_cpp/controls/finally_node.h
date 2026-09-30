@@ -14,7 +14,8 @@ namespace BT
  * - If this node is halted while main is RUNNING, main is halted and cleanup
  *   is ticked once synchronously. If cleanup returns RUNNING, it is halted.
  * - The node returns main's status, or FAILURE if cleanup fails.
- * - Exceptions thrown by cleanup propagate.
+ * - Exceptions thrown by cleanup propagate from tick(). During halt they are
+ *   printed to stderr instead, because halt() also runs from ~Tree().
  *
  * Requires exactly 2 children.
  */

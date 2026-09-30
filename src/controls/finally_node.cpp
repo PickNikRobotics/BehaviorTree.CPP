@@ -12,12 +12,21 @@ FinallyNode::FinallyNode(const std::string& name, const NodeConfig& config)
 
 void FinallyNode::halt()
 {
-  if(!in_cleanup_ && isStatusActive(status()) && children_nodes_.size() == 2)
+  if(!in_cleanup_ && status() == NodeStatus::RUNNING && children_nodes_.size() == 2)
   {
     haltChild(0);
-    if(children_nodes_[1]->executeTick() == NodeStatus::RUNNING)
+    // halt() also runs from ~Tree(), where a propagating exception terminates.
+    try
     {
-      haltChild(1);
+      if(children_nodes_[1]->executeTick() == NodeStatus::RUNNING)
+      {
+        haltChild(1);
+      }
+    }
+    catch(const std::exception& ex)
+    {
+      std::cerr << "[" << name() << "]: Finally cleanup threw during halt: " << ex.what()
+                << std::endl;
     }
   }
   in_cleanup_ = false;
@@ -71,7 +80,16 @@ NodeStatus FinallyNode::tick()
 
   resetChildren();
   in_cleanup_ = false;
-  return cleanup_status == NodeStatus::FAILURE ? NodeStatus::FAILURE : main_status_;
+  if(cleanup_status == NodeStatus::FAILURE)
+  {
+    return NodeStatus::FAILURE;
+  }
+  if(main_status_ == NodeStatus::SKIPPED)
+  {
+    // executeTick() keeps our RUNNING status on SKIPPED, and halt() would rerun cleanup.
+    resetStatus();
+  }
+  return main_status_;
 }
 
 }  // namespace BT
