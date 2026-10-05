@@ -445,7 +445,6 @@ protected:
   friend class BehaviorTreeFactory;
   friend class DecoratorNode;
   friend class ControlNode;
-  friend class FinallyNode;  // resets a child whose halt() threw
   friend class Tree;
 
   [[nodiscard]] NodeConfig& config();

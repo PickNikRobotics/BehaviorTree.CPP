@@ -4,7 +4,7 @@ Changelog for package behaviortree_cpp
 
 Forthcoming
 -----------
-* Add Finally control node: always runs a cleanup child after the main child finishes, fails, throws, or is halted
+* Add Finally control node: runs a cleanup child after the main child finishes, fails, or throws, and runs it synchronously when halted. Registers the built-in ID ``Finally``
 
 4.9.0 (2026-02-11)
 ------------------

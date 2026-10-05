@@ -9,7 +9,7 @@ namespace
 // Prints the exception being handled. Call only from inside a catch block.
 void printCurrentException(const std::string& node_name, const char* context)
 {
-  std::cerr << "[" << node_name << "]: Finally " << context << ": ";
+  std::cerr << "[" << node_name << "]: " << context << ": ";
   try
   {
     throw;
@@ -39,7 +39,11 @@ void FinallyNode::halt()
     haltChildNoThrow(0);
     try
     {
-      children_nodes_[1]->executeTick();
+      if(children_nodes_[1]->executeTick() == NodeStatus::FAILURE)
+      {
+        std::cerr << "[" << name() << "]: cleanup returned FAILURE during halt"
+                  << std::endl;
+      }
     }
     catch(...)
     {
@@ -64,7 +68,6 @@ void FinallyNode::haltChildNoThrow(size_t i)
   catch(...)
   {
     printCurrentException(name(), "a child threw while being halted");
-    children_nodes_[i]->resetStatus();
   }
 }
 

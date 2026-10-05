@@ -352,3 +352,66 @@ TEST_F(FinallyTest, HaltedByReactiveSequence_CleanupRunsOnce)
   tree.haltTree();
   EXPECT_EQ(cleanup_count, 1);
 }
+
+TEST_F(FinallyTest, InsideHaltedSubTree_CleanupRuns)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4" main_tree_to_execute="Main">
+      <BehaviorTree ID="Main"><SubTree ID="Inner"/></BehaviorTree>
+      <BehaviorTree ID="Inner">
+        <Finally><AsyncMain/><Cleanup/></Finally>
+      </BehaviorTree>
+    </root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, NestedFinallyAsCleanup_RunsDuringOuterHalt)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally>
+        <AsyncMain/>
+        <Finally><Cleanup/><Cleanup/></Finally>
+      </Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 2);
+}
+
+TEST_F(FinallyTest, NestedFinallyAsMain_BothCleanupsRunOnHalt)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally>
+        <Finally><AsyncMain/><Cleanup/></Finally>
+        <Cleanup/>
+      </Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 2);
+}
+
+TEST_F(FinallyTest, CleanupFailsDuringHalt_IsReported)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning/><AlwaysFailure/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  testing::internal::CaptureStderr();
+  tree.haltTree();
+  EXPECT_NE(testing::internal::GetCapturedStderr().find("cleanup returned FAILURE during "
+                                                        "halt"),
+            std::string::npos);
+}
