@@ -4,6 +4,27 @@
 
 namespace BT
 {
+namespace
+{
+// Prints the exception being handled. Call only from inside a catch block.
+void printCurrentException(const std::string& node_name, const char* context)
+{
+  std::cerr << "[" << node_name << "]: Finally " << context << ": ";
+  try
+  {
+    throw;
+  }
+  catch(const std::exception& ex)
+  {
+    std::cerr << ex.what() << std::endl;
+  }
+  catch(...)
+  {
+    std::cerr << "non-std exception" << std::endl;
+  }
+}
+}  // namespace
+
 FinallyNode::FinallyNode(const std::string& name, const NodeConfig& config)
   : ControlNode::ControlNode(name, config)
 {
@@ -12,25 +33,39 @@ FinallyNode::FinallyNode(const std::string& name, const NodeConfig& config)
 
 void FinallyNode::halt()
 {
+  // halt() also runs from ~Tree(), where a propagating exception terminates, so nothing here throws.
   if(!in_cleanup_ && status() == NodeStatus::RUNNING && children_nodes_.size() == 2)
   {
-    haltChild(0);
-    // halt() also runs from ~Tree(), where a propagating exception terminates.
+    haltChildNoThrow(0);
     try
     {
-      if(children_nodes_[1]->executeTick() == NodeStatus::RUNNING)
-      {
-        haltChild(1);
-      }
+      children_nodes_[1]->executeTick();
     }
-    catch(const std::exception& ex)
+    catch(...)
     {
-      std::cerr << "[" << name() << "]: Finally cleanup threw during halt: " << ex.what()
-                << std::endl;
+      printCurrentException(name(), "cleanup threw during halt");
     }
   }
+  for(size_t i = 0; i < children_nodes_.size(); i++)
+  {
+    haltChildNoThrow(i);
+  }
   in_cleanup_ = false;
-  ControlNode::halt();
+  main_status_ = NodeStatus::IDLE;
+  resetStatus();
+}
+
+void FinallyNode::haltChildNoThrow(size_t i)
+{
+  try
+  {
+    haltChild(i);
+  }
+  catch(...)
+  {
+    printCurrentException(name(), "a child threw while being halted");
+    children_nodes_[i]->resetStatus();
+  }
 }
 
 NodeStatus FinallyNode::tick()
@@ -53,11 +88,10 @@ NodeStatus FinallyNode::tick()
     {
       main_status_ = children_nodes_[0]->executeTick();
     }
-    catch(const std::exception& ex)
+    catch(...)
     {
-      std::cerr << "[" << name() << "]: Finally caught an exception from its main child, "
-                << "running cleanup and returning FAILURE: " << ex.what() << std::endl;
-      haltChild(0);
+      printCurrentException(name(), "main threw, running cleanup and returning FAILURE");
+      haltChildNoThrow(0);
       main_status_ = NodeStatus::FAILURE;
     }
 

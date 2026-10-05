@@ -6,13 +6,16 @@
 
 using BT::NodeStatus;
 
-// RUNNING until halted; throws on its second tick if `throw_on_running` is set.
+// RUNNING until halted. Optionally throws on its second tick, or from onHalted().
 class AsyncMain : public BT::StatefulActionNode
 {
 public:
   AsyncMain(const std::string& name, const BT::NodeConfig& config, int* halted,
-            bool throw_on_running)
-    : StatefulActionNode(name, config), halted_(halted), throw_(throw_on_running)
+            bool throw_on_running, bool throw_on_halt)
+    : StatefulActionNode(name, config)
+    , halted_(halted)
+    , throw_(throw_on_running)
+    , throw_on_halt_(throw_on_halt)
   {}
   static BT::PortsList providedPorts()
   {
@@ -33,11 +36,16 @@ public:
   void onHalted() override
   {
     (*halted_)++;
+    if(throw_on_halt_)
+    {
+      throw std::runtime_error("halt boom");
+    }
   }
 
 private:
   int* halted_;
   bool throw_;
+  bool throw_on_halt_;
 };
 
 class FinallyTest : public testing::Test
@@ -48,6 +56,8 @@ protected:
   int main_ticks = 0;
   int main_halted = 0;
   int cleanup_ticks = 0;
+  int throw_once_ticks = 0;
+  bool gate = true;
 
   void SetUp() override
   {
@@ -61,8 +71,22 @@ protected:
     factory.registerSimpleCondition("RunTwice", [this](BT::TreeNode&) {
       return ++main_ticks < 3 ? NodeStatus::RUNNING : NodeStatus::SUCCESS;
     });
-    factory.registerNodeType<AsyncMain>("AsyncMain", &main_halted, false);
-    factory.registerNodeType<AsyncMain>("AsyncThrow", &main_halted, true);
+    factory.registerNodeType<AsyncMain>("AsyncMain", &main_halted, false, false);
+    factory.registerNodeType<AsyncMain>("AsyncThrow", &main_halted, true, false);
+    factory.registerNodeType<AsyncMain>("AsyncHaltThrows", &main_halted, false, true);
+    factory.registerNodeType<AsyncMain>("AsyncThrowHaltThrows", &main_halted, true, true);
+    factory.registerSimpleAction("ThrowInt",
+                                 [](BT::TreeNode&) -> NodeStatus { throw 1; });
+    factory.registerSimpleAction("ThrowOnce", [this](BT::TreeNode&) {
+      if(++throw_once_ticks == 1)
+      {
+        throw std::runtime_error("once");
+      }
+      return NodeStatus::SUCCESS;
+    });
+    factory.registerSimpleCondition("Gate", [this](BT::TreeNode&) {
+      return gate ? NodeStatus::SUCCESS : NodeStatus::FAILURE;
+    });
     // Cleanup that is RUNNING on its first tick, then SUCCESS
     factory.registerSimpleCondition("AsyncCleanup", [this](BT::TreeNode&) {
       return ++cleanup_ticks < 2 ? NodeStatus::RUNNING : NodeStatus::SUCCESS;
@@ -181,6 +205,8 @@ TEST_F(FinallyTest, MainSkipped_CleanupRunsAndReturnsSkipped)
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SKIPPED);
+  EXPECT_EQ(cleanup_count, 1);
+  // The node must not be left RUNNING, or this halt would run cleanup again.
   tree.haltTree();
   EXPECT_EQ(cleanup_count, 1);
 }
@@ -246,4 +272,83 @@ TEST_F(FinallyTest, CleanupThrowsDuringHalt_DoesNotPropagate)
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   EXPECT_NO_THROW(tree.haltTree());
   EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
+}
+
+TEST_F(FinallyTest, MainThrowsAndItsHaltThrows_CleanupStillRuns)
+{
+  EXPECT_EQ(run("<AsyncThrowHaltThrows/>"), NodeStatus::FAILURE);
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, HaltWhereMainHaltThrows_CleanupRunsAndNothingPropagates)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AsyncHaltThrows/><Cleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_NO_THROW(tree.haltTree());
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, MainThrowsNonStdException_CleanupRunsAndReturnsFailure)
+{
+  EXPECT_EQ(run("<ThrowInt/>"), NodeStatus::FAILURE);
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, CleanupThrowsNonStdExceptionDuringHalt_DoesNotPropagate)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning/><ThrowInt/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_NO_THROW(tree.haltTree());
+}
+
+TEST_F(FinallyTest, CleanupThrows_NextTickRetriesCleanupOnly)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><RunTwice/><ThrowOnce/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
+  EXPECT_EQ(main_ticks, 3);
+  EXPECT_EQ(throw_once_ticks, 2);
+}
+
+TEST_F(FinallyTest, CleanupSkipped_ReturnsMainStatus)
+{
+  EXPECT_EQ(run("<AlwaysFailure/>", R"(<AlwaysSuccess _skipIf="true"/>)"),
+            NodeStatus::FAILURE);
+}
+
+TEST_F(FinallyTest, HaltedByReactiveSequence_CleanupRunsOnce)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <ReactiveSequence>
+        <Gate/>
+        <Finally><AsyncMain/><Cleanup/></Finally>
+      </ReactiveSequence>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_EQ(cleanup_count, 0);
+  gate = false;
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::FAILURE);
+  EXPECT_EQ(main_halted, 1);
+  EXPECT_EQ(cleanup_count, 1);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_count, 1);
 }
