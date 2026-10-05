@@ -2,19 +2,20 @@
 
 #include <exception>
 #include <iostream>
+#include <string_view>
 #include <utility>
 
 namespace BT
 {
 namespace
 {
-// Prints the exception being handled. Call only from inside a catch block.
-void printCurrentException(const std::string& node_name, const char* context)
+void printException(std::string_view node_name, const char* context,
+                    const std::exception_ptr& exception)
 {
   std::cerr << "[" << node_name << "]: " << context << ": ";
   try
   {
-    throw;
+    std::rethrow_exception(exception);
   }
   catch(const std::exception& ex)
   {
@@ -49,7 +50,7 @@ void FinallyNode::halt()
     }
     catch(...)
     {
-      printCurrentException(name(), "cleanup threw during halt");
+      printException(name(), "cleanup threw during halt", std::current_exception());
     }
   }
   for(size_t i = 0; i < children_nodes_.size(); i++)
@@ -70,7 +71,7 @@ void FinallyNode::haltChildNoThrow(size_t i)
   }
   catch(...)
   {
-    printCurrentException(name(), "a child threw while being halted");
+    printException(name(), "a child threw while being halted", std::current_exception());
   }
 }
 

@@ -6,6 +6,11 @@
 
 using BT::NodeStatus;
 
+struct TestError : std::runtime_error
+{
+  using std::runtime_error::runtime_error;
+};
+
 // RUNNING until halted. Optionally throws on its second tick, or from onHalted().
 class AsyncMain : public BT::StatefulActionNode
 {
@@ -29,7 +34,7 @@ public:
   {
     if(throw_)
     {
-      throw std::runtime_error("boom");
+      throw TestError("boom");
     }
     return NodeStatus::RUNNING;
   }
@@ -38,7 +43,7 @@ public:
     (*halted_)++;
     if(throw_on_halt_)
     {
-      throw std::runtime_error("halt boom");
+      throw TestError("halt boom");
     }
   }
 
@@ -66,7 +71,7 @@ protected:
       return NodeStatus::SUCCESS;
     });
     factory.registerSimpleAction(
-        "Throw", [](BT::TreeNode&) -> NodeStatus { throw std::runtime_error("boom"); });
+        "Throw", [](BT::TreeNode&) -> NodeStatus { throw TestError("boom"); });
     // RUNNING twice, then SUCCESS
     factory.registerSimpleCondition("RunTwice", [this](BT::TreeNode&) {
       return ++main_ticks < 3 ? NodeStatus::RUNNING : NodeStatus::SUCCESS;
@@ -80,7 +85,7 @@ protected:
     factory.registerSimpleAction("ThrowOnce", [this](BT::TreeNode&) {
       if(++throw_once_ticks == 1)
       {
-        throw std::runtime_error("once");
+        throw TestError("once");
       }
       return NodeStatus::SUCCESS;
     });
