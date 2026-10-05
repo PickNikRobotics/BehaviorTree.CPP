@@ -2,6 +2,10 @@
 Changelog for package behaviortree_cpp
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add Finally control node: always runs a cleanup child after the main child finishes, fails, throws, or is halted
+
 4.9.0 (2026-02-11)
 ------------------
 * Fix Blackboard thread-safety: 6 data races fixed, use shared_mutex for storage
