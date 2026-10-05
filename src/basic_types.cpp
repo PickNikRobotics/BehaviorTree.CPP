@@ -494,11 +494,8 @@ bool IsAllowedPortName(StringView str)
   {
     return false;
   }
-  // Check for forbidden characters
-  if(findForbiddenChar(str) != '\0')
-  {
-    return false;
-  }
+  // Fork divergence: upstream 4.9.0 also rejects findForbiddenChar's characters
+  // here. The fork keeps its 4.7.2 rules, so names like `goal.pose` still bind.
   return !IsReservedAttribute(str);
 }
 
@@ -519,6 +516,16 @@ bool IsReservedAttribute(StringView str)
     }
   }
   return str == "name" || str == "ID" || str == "_autoremap";
+}
+
+void ThrowIfPortNameContainsWhitespace(StringView name)
+{
+  const auto has_whitespace = std::any_of(
+      name.begin(), name.end(), [](unsigned char c) { return std::isspace(c) != 0; });
+  if(has_whitespace)
+  {
+    throw RuntimeError("The name of a port must not contain whitespace: '", name, "'");
+  }
 }
 
 char findForbiddenChar(StringView name)

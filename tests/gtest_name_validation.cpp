@@ -2,6 +2,9 @@
 #include "behaviortree_cpp/bt_factory.h"
 #include "behaviortree_cpp/xml_parsing.h"
 
+#include <algorithm>
+#include <memory>
+
 #include <gtest/gtest.h>
 
 using namespace BT;
@@ -113,11 +116,59 @@ TEST(NameValidation, IsAllowedPortName_Invalid)
   EXPECT_FALSE(IsAllowedPortName("_onHalted"));
   EXPECT_FALSE(IsAllowedPortName("_post"));
   EXPECT_FALSE(IsAllowedPortName("_autoremap"));
+}
 
-  // Forbidden characters
-  EXPECT_FALSE(IsAllowedPortName("port name"));  // space
-  EXPECT_FALSE(IsAllowedPortName("port.name"));  // period
-  EXPECT_FALSE(IsAllowedPortName("port<T>"));    // angle brackets
+// Fork divergence: port names follow the fork's 4.7.2 rules. They must start
+// with a letter and not be reserved; CreatePort and <TreeNodesModel> also
+// reject whitespace. Upstream 4.9.0's forbidden-character list does not apply.
+TEST(NameValidation, IsAllowedPortName_ForbiddenCharsAcceptedByFork)
+{
+  EXPECT_TRUE(IsAllowedPortName("port.name"));
+  EXPECT_TRUE(IsAllowedPortName("port:name"));
+  EXPECT_TRUE(IsAllowedPortName("port/name"));
+  // Whitespace is rejected by CreatePort and <TreeNodesModel>, not here.
+  EXPECT_TRUE(IsAllowedPortName("port name"));
+}
+
+TEST(NameValidation, CppPortNameFollowsFork472Rules)
+{
+  BehaviorTreeFactory factory;
+  factory.registerSimpleAction("ReadPose",
+                               [](TreeNode& node) {
+                                 return node.getInput<std::string>("goal.pose").value() ==
+                                                "home" ?
+                                            NodeStatus::SUCCESS :
+                                            NodeStatus::FAILURE;
+                               },
+                               { InputPort<std::string>("goal.pose") });
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="MainTree">
+        <Sequence>
+          <Script code="key := 'home'"/>
+          <Action ID="ReadPose" goal.pose="home"/>
+          <Action ID="ReadPose" goal.pose="{key}"/>
+        </Sequence>
+      </BehaviorTree>
+    </root>)";
+  Tree tree;
+  ASSERT_NO_THROW(tree = factory.createTreeFromText(xml));
+  EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+
+  for(const char* name : { "goal pose", "goal\tpose", "goal\npose" })
+  {
+    try
+    {
+      (void)InputPort<std::string>(name);
+      FAIL() << "Expected RuntimeError to be thrown for " << name;
+    }
+    catch(const RuntimeError& e)
+    {
+      EXPECT_NE(std::string(e.what()).find("must not contain whitespace"),
+                std::string::npos)
+          << e.what();
+    }
+  }
 }
 
 // ============== Tests for XML parsing validation ==============
@@ -150,31 +201,9 @@ TEST_F(NameValidationXMLTest, ValidBehaviorTreeID_WithUnderscore)
   EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_Root)
-{
-  const char* xml = R"(
-    <root BTCPP_format="4">
-      <BehaviorTree ID="Root">
-        <AlwaysSuccess/>
-      </BehaviorTree>
-    </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
-}
-
-TEST_F(NameValidationXMLTest, InvalidBehaviorTreeID_root_lowercase)
-{
-  const char* xml = R"(
-    <root BTCPP_format="4">
-      <BehaviorTree ID="root">
-        <AlwaysSuccess/>
-      </BehaviorTree>
-    </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
-}
-
 // Fork divergence: upstream rejects spaces in model names; this fork permits
 // them because MoveIt Pro names every Objective in human-readable form
-// ("Close Gripper", "Move to Pose"). See validateModelName in xml_parsing.cpp.
+// ("Close Gripper", "Move to Pose"). See ModelNamesAreNotValidatedByFork.
 TEST_F(NameValidationXMLTest, BehaviorTreeID_WithSpace_IsAcceptedByFork)
 {
   const char* xml = R"(
@@ -262,8 +291,6 @@ TEST_F(NameValidationXMLTest, SubTreeID_WithSpace_IsAcceptedByFork)
   EXPECT_NO_THROW(factory.createTreeFromText(xml));
 }
 
-// The space, the apostrophe and the dot are the ONLY relaxations. Every other
-// forbidden character must still throw -- these are what the validation exists for.
 // Fork divergence: MoveIt Pro puts no validation on Objective names, and its
 // REST suite pins a name with an apostrophe. An apostrophe needs no escaping in
 // the double-quoted attribute value BT.CPP writes.
@@ -291,24 +318,201 @@ TEST_F(NameValidationXMLTest, BehaviorTreeID_WithApostrophe_IsAcceptedByFork)
   EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, ForkStillRejectsOtherForbiddenCharsInModelName)
+// Fork divergence: model names are not validated, as in 4.7.2. MoveIt Pro does
+// not use them as XML element names, and tinyxml2 escapes them as attribute
+// values, so every character survives a load and a WriteTreeToXML round trip.
+TEST(NameValidation, ModelNamesAreNotValidatedByFork)
 {
-  // The trailing group puts the offender AFTER a carved-out character.
-  // findForbiddenChar returns only the first offender, so a naive filter on its
-  // result would accept every one of these.
-  for(const char* bad_id :
+  const auto escape = [](const std::string& value) {
+    std::string out;
+    for(const char c : value)
+    {
+      switch(c)
+      {
+        case '&':
+          out += "&amp;";
+          break;
+        case '<':
+          out += "&lt;";
+          break;
+        case '>':
+          out += "&gt;";
+          break;
+        case '"':
+          out += "&quot;";
+          break;
+        default:
+          out += c;
+      }
+    }
+    return out;
+  };
+
+  for(const std::string id :
       { "Main/Tree", "Main\\Tree", "Main:Tree", "Main*Tree", "Main?Tree", "Main|Tree",
-        "Pick & Place", "Robot's Home/Left", "Robot's <Home>", "A B\\C",
-        "Presoak 1.2|beta", "v1.2:final" })
+        "Pick & Place", "Robot's <Home>", "Say \"hi\"", "Root", "root" })
   {
-    const std::string xml = std::string(R"(<root BTCPP_format="4">
-      <BehaviorTree ID=")") +
-                            bad_id + R"(">
-        <AlwaysSuccess/>
+    const std::string xml = R"(<root BTCPP_format="4" main_tree_to_execute="Main">
+      <BehaviorTree ID="Main"><SubTree ID=")" +
+                            escape(id) + R"("/></BehaviorTree>
+      <BehaviorTree ID=")" + escape(id) +
+                            R"("><AlwaysSuccess/></BehaviorTree>
+    </root>)";
+
+    BehaviorTreeFactory factory;
+    Tree tree;
+    ASSERT_NO_THROW(tree = factory.createTreeFromText(xml)) << id;
+    const auto has_subtree =
+        std::any_of(tree.subtrees.begin(), tree.subtrees.end(),
+                    [&id](const auto& subtree) { return subtree->tree_ID == id; });
+    EXPECT_TRUE(has_subtree) << id;
+
+    const std::string written = WriteTreeToXML(tree, false, false);
+    BehaviorTreeFactory reloaded;
+    ASSERT_NO_THROW(reloaded.registerBehaviorTreeFromText(written)) << written;
+    const auto trees = reloaded.registeredBehaviorTrees();
+    EXPECT_NE(std::find(trees.begin(), trees.end(), id), trees.end()) << written;
+  }
+}
+
+// Fork divergence: node type names are not validated either. `Root` and a name
+// with ':' are valid XML element names that upstream rejects.
+TEST(NameValidation, NodeTypeNameIsNotValidatedByFork)
+{
+  BehaviorTreeFactory factory;
+  factory.registerSimpleAction("Root", [](TreeNode&) { return NodeStatus::SUCCESS; });
+  factory.registerSimpleAction("My:Action",
+                               [](TreeNode&) { return NodeStatus::SUCCESS; });
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="MainTree">
+        <Sequence>
+          <Root/>
+          <My:Action/>
+        </Sequence>
       </BehaviorTree>
     </root>)";
-    EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError) << bad_id;
+  Tree tree;
+  ASSERT_NO_THROW(tree = factory.createTreeFromText(xml));
+  EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+}
+
+// Fork divergence: WriteTreeToXML writes every node as <Action ID="...">,
+// <Control ID="..."> and so on, so node type names that are not valid XML
+// element names still produce XML that loads.
+TEST(NameValidation, WriteTreeToXMLUsesExplicitForm)
+{
+  const auto make_factory = [] {
+    auto factory = std::make_unique<BehaviorTreeFactory>();
+    factory->registerSimpleAction("Pick / Place",
+                                  [](TreeNode&) { return NodeStatus::SUCCESS; });
+    factory->registerSimpleCondition("Is / Ready",
+                                     [](TreeNode&) { return NodeStatus::SUCCESS; });
+    return factory;
+  };
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="MainTree">
+        <Sequence>
+          <Condition ID="Is / Ready"/>
+          <Inverter>
+            <Inverter>
+              <Action ID="Pick / Place" name="pick"/>
+            </Inverter>
+          </Inverter>
+        </Sequence>
+      </BehaviorTree>
+    </root>)";
+  const auto factory = make_factory();
+  const Tree tree = factory->createTreeFromText(xml);
+
+  // The arguments FileLogger2, SqliteLogger and Groot2Publisher use.
+  const std::string written = WriteTreeToXML(tree, true, true);
+  const std::string tree_part = written.substr(0, written.find("<TreeNodesModel"));
+  for(const char* expected :
+      { R"(<Action ID="Pick / Place")", R"(<Condition ID="Is / Ready")",
+        R"(<Decorator ID="Inverter")", R"(<Control ID="Sequence")" })
+  {
+    EXPECT_NE(tree_part.find(expected), std::string::npos) << expected << "\n" << written;
   }
+  for(const char* compact : { "<Pick / Place", "<Is / Ready", "<Inverter", "<Sequence" })
+  {
+    EXPECT_EQ(tree_part.find(compact), std::string::npos) << compact << "\n" << written;
+  }
+
+  const auto reloaded = make_factory();
+  ASSERT_NO_THROW(reloaded->registerBehaviorTreeFromText(written)) << written;
+  Tree again;
+  ASSERT_NO_THROW(again = reloaded->createTree("MainTree")) << written;
+  EXPECT_EQ(again.tickWhileRunning(), NodeStatus::SUCCESS);
+}
+
+// A node registered with an UNDEFINED manifest has no tag of its own, so it is
+// written as <Action ID="...">, which loads it.
+TEST(NameValidation, WriteTreeToXMLWritesUndefinedNodeAsAction)
+{
+  class UndefinedNode : public TreeNode
+  {
+  public:
+    UndefinedNode(const std::string& name, const NodeConfig& config)
+      : TreeNode(name, config)
+    {}
+    NodeType type() const override
+    {
+      return NodeType::UNDEFINED;
+    }
+    NodeStatus tick() override
+    {
+      return NodeStatus::SUCCESS;
+    }
+    void halt() override
+    {}
+  };
+  const auto make_factory = [] {
+    auto factory = std::make_unique<BehaviorTreeFactory>();
+    TreeNodeManifest manifest;
+    manifest.type = NodeType::UNDEFINED;
+    manifest.registration_ID = "Odd / Name";
+    factory->registerBuilder(manifest,
+                             [](const std::string& name, const NodeConfig& config) {
+                               return std::make_unique<UndefinedNode>(name, config);
+                             });
+    return factory;
+  };
+  const char* xml = R"(
+    <root BTCPP_format="4">
+      <BehaviorTree ID="MainTree">
+        <Action ID="Odd / Name"/>
+      </BehaviorTree>
+    </root>)";
+  const Tree tree = make_factory()->createTreeFromText(xml);
+  const std::string written = WriteTreeToXML(tree, true, true);
+  EXPECT_NE(written.find(R"(<Action ID="Odd / Name")"), std::string::npos) << written;
+
+  const auto reloaded = make_factory();
+  ASSERT_NO_THROW(reloaded->registerBehaviorTreeFromText(written)) << written;
+  Tree again;
+  ASSERT_NO_THROW(again = reloaded->createTree("MainTree")) << written;
+  EXPECT_EQ(again.tickWhileRunning(), NodeStatus::SUCCESS);
+}
+
+// Fork divergence: an XSD can only describe node types used as element names,
+// which this fork does not support.
+TEST(NameValidation, WriteTreeXSDIsDisabledByFork)
+{
+  const BehaviorTreeFactory factory;
+  EXPECT_THROW((void)writeTreeXSD(factory), RuntimeError);
+}
+
+TEST_F(NameValidationXMLTest, EmptySubTreeIDIsRejected)
+{
+  const char* xml = R"(
+    <root BTCPP_format="4" main_tree_to_execute="MainTree">
+      <BehaviorTree ID="MainTree">
+        <SubTree ID=""/>
+      </BehaviorTree>
+    </root>)";
+  EXPECT_THROW((void)factory.createTreeFromText(xml), RuntimeError);
 }
 
 // ============== Tests for Unicode support ==============
@@ -383,7 +587,9 @@ TEST_F(NameValidationXMLTest, InvalidSubTreePortName_WithSpace)
   EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
 }
 
-TEST_F(NameValidationXMLTest, InvalidSubTreePortName_Reserved)
+// Fork divergence: as in the fork's 4.7.2, <TreeNodesModel> ports only reject
+// whitespace.
+TEST_F(NameValidationXMLTest, SubTreePortName_Reserved_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4" main_tree_to_execute="MainTree">
@@ -396,10 +602,10 @@ TEST_F(NameValidationXMLTest, InvalidSubTreePortName_Reserved)
         </SubTree>
       </TreeNodesModel>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
 }
 
-TEST_F(NameValidationXMLTest, InvalidSubTreePortName_StartsWithDigit)
+TEST_F(NameValidationXMLTest, SubTreePortName_StartsWithDigit_IsAcceptedByFork)
 {
   const char* xml = R"(
     <root BTCPP_format="4" main_tree_to_execute="MainTree">
@@ -412,5 +618,5 @@ TEST_F(NameValidationXMLTest, InvalidSubTreePortName_StartsWithDigit)
         </SubTree>
       </TreeNodesModel>
     </root>)";
-  EXPECT_THROW(factory.createTreeFromText(xml), RuntimeError);
+  EXPECT_NO_THROW((void)factory.createTreeFromText(xml));
 }

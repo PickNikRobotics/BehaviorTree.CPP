@@ -12,7 +12,6 @@
 
 #include "behaviortree_cpp/basic_types.h"
 
-#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <functional>
@@ -56,37 +55,6 @@
 #include "behaviortree_cpp/tree_node.h"
 #include "behaviortree_cpp/utils/demangle_util.h"
 
-namespace
-{
-std::string xsdAttributeType(const BT::PortInfo& port_info)
-{
-  if(port_info.direction() == BT::PortDirection::OUTPUT)
-  {
-    return "blackboardType";
-  }
-  const auto& type_info = port_info.type();
-  if((type_info == typeid(int)) || (type_info == typeid(unsigned int)))
-  {
-    return "integerOrBlackboardType";
-  }
-  else if(type_info == typeid(double))
-  {
-    return "decimalOrBlackboardType";
-  }
-  else if(type_info == typeid(bool))
-  {
-    return "booleanOrBlackboardType";
-  }
-  else if(type_info == typeid(std::string))
-  {
-    return "stringOrBlackboardType";
-  }
-
-  return std::string();
-}
-
-}  // namespace
-
 namespace BT
 {
 using namespace tinyxml2;
@@ -96,101 +64,6 @@ namespace
 auto StrEqual = [](const char* str1, const char* str2) -> bool {
   return strcmp(str1, str2) == 0;
 };
-
-// Helper to format forbidden character for error messages
-std::string formatForbiddenChar(char c)
-{
-  if(c < 32 || c == 127)
-  {
-    return "control character (ASCII " + std::to_string(static_cast<int>(c)) + ")";
-  }
-  return std::string("'") + c + "'";
-}
-
-void validateModelName(const std::string& name, int line_number)
-{
-  const auto line_str = std::to_string(line_number);
-  if(name.empty())
-  {
-    throw RuntimeError("Error at line ", line_str,
-                       ": Model/Node type name cannot be empty");
-  }
-  if(name == "Root" || name == "root")
-  {
-    throw RuntimeError("Error at line ", line_str,
-                       ": 'Root' is a reserved name and cannot be used as a node type");
-  }
-  // Fork divergence: spaces, apostrophes and dots are permitted in model names.
-  //
-  // Upstream 4.9.0 rejects all three here, but MoveIt Pro names every Objective
-  // and SubTree in human-readable form, and puts no validation of its own on
-  // those names, so whatever an operator types becomes a model name. 4.7.2 did
-  // not validate model names at all, so anything already saved loads today.
-  // Enforcing the upstream rule would refuse configs that work now:
-  //   ' '   1926 IDs across 334 files in moveit_pro and moveit_pro_example_ws,
-  //         276 distinct, including `Close Gripper` and `Move to Pose`.
-  //   '\''  pinned by MoveIt Pro's REST suite as `Robot's Home`, on the grounds
-  //         that supported names are XML attribute values rather than
-  //         interpolated XPath expressions.
-  //   '.'   found in a customer workspace as `Test Presoak 1.2`. Version-suffixed
-  //         names are natural and renaming them is a migration we would be
-  //         imposing for no benefit we can point at.
-  //
-  // None of the three breaks what this validation exists for. All survive a
-  // filesystem round-trip, an apostrophe needs no escaping inside the
-  // double-quoted attribute value BT.CPP writes, and a dot is not structural
-  // here: node paths are built from '/' and "::" (see createNodeFromXML and the
-  // subtree_path construction below), and the '.' handling in
-  // script_tokenizer.cpp applies to script source, which model names never
-  // enter. Port names are a separate namespace and still reject '.' through
-  // IsAllowedPortName.
-  //
-  // The characters that do break serialization are still rejected, '<' '>' '&'
-  // '"', as are '/' '\\' ':' '*' '?' '|', which collide with the path syntax
-  // above or with filesystem round-tripping. Upstream already permits all three
-  // carved-out characters in instance names for the same human-readability
-  // reason (see validateInstanceName below), so this narrows the model/instance
-  // gap rather than inventing a new rule.
-  //
-  // findForbiddenChar returns the FIRST offender, so it cannot be filtered by
-  // comparing its result: a name whose first offender is carved out would hide
-  // every later one, and "Pick & Place" would pass on the space while its '&'
-  // went unseen. Drop the carved-out characters first, then scan what is left.
-  std::string scanned(name);
-  scanned.erase(
-      std::remove_if(scanned.begin(), scanned.end(),
-                     [](char ch) { return ch == ' ' || ch == '\'' || ch == '.'; }),
-      scanned.end());
-  if(char c = findForbiddenChar(scanned); c != '\0')
-  {
-    throw RuntimeError("Error at line ", line_str, ": Model name '", name,
-                       "' contains forbidden character ", formatForbiddenChar(c));
-  }
-}
-
-void validatePortName(const std::string& name, int line_number)
-{
-  const auto line_str = std::to_string(line_number);
-  if(name.empty())
-  {
-    throw RuntimeError("Error at line ", line_str, ": Port name cannot be empty");
-  }
-  if(std::isdigit(static_cast<unsigned char>(name[0])) != 0)
-  {
-    throw RuntimeError("Error at line ", line_str, ": Port name '", name,
-                       "' cannot start with a digit");
-  }
-  if(char c = findForbiddenChar(name); c != '\0')
-  {
-    throw RuntimeError("Error at line ", line_str, ": Port name '", name,
-                       "' contains forbidden character ", formatForbiddenChar(c));
-  }
-  if(IsReservedAttribute(name))
-  {
-    throw RuntimeError("Error at line ", line_str, ": Port name '", name,
-                       "' is a reserved attribute name");
-  }
-}
 
 void validateInstanceName(const std::string& name, int line_number)
 {
@@ -247,7 +120,7 @@ void parseSubtreeModelPorts(const XMLElement* sub_node, SubtreeModel& subtree_mo
       {
         throw RuntimeError("Missing attribute [name] in port (SubTree model)");
       }
-      validatePortName(port_name, port_node->GetLineNum());
+      ThrowIfPortNameContainsWhitespace(port_name);
       if(auto default_value = port_node->Attribute("default"))
       {
         port.setDefaultValue(default_value);
@@ -611,11 +484,6 @@ void VerifyXML(const std::string& xml_text,
       {
         ThrowError(line_number, "The tag <BehaviorTree> must have the attribute [ID]");
       }
-      // Validate BehaviorTree ID as a model name
-      if(!ID.empty())
-      {
-        validateModelName(ID, line_number);
-      }
       if(registered_nodes.count(ID) != 0)
       {
         ThrowError(line_number, "The attribute [ID] of tag <BehaviorTree> must not use "
@@ -634,8 +502,6 @@ void VerifyXML(const std::string& xml_text,
         ThrowError(line_number,
                    "<SubTree> with ID '" + ID + "' should not have any child");
       }
-      // Validate SubTree ID as a model name
-      validateModelName(ID, line_number);
       if(registered_nodes.count(ID) != 0)
       {
         ThrowError(line_number, "The attribute [ID] of tag <SubTree> must not use the "
@@ -646,11 +512,6 @@ void VerifyXML(const std::string& xml_text,
     {
       // use ID for builtin node types, otherwise use the element name
       const auto lookup_name = is_builtin ? ID : name;
-      // Validate model name for custom node types (non-builtin element names)
-      if(!is_builtin)
-      {
-        validateModelName(name, line_number);
-      }
       const auto search = registered_nodes.find(lookup_name);
       const bool found = (search != registered_nodes.end());
       if(!found)
@@ -1388,7 +1249,12 @@ void addTreeToXML(const Tree& tree, XMLDocument& doc, XMLElement* rootXML,
     }
     else
     {
-      elem = doc.NewElement(node.registrationName().c_str());
+      // Fork divergence: write <Action ID="..."> rather than an element named after
+      // the node type, so node type names need not be valid XML element names.
+      // "Undefined" is not a tag the parser knows; <Action ID> loads such nodes.
+      const NodeType type = node.type();
+      elem = doc.NewElement(type == NodeType::UNDEFINED ? "Action" : toStr(type).c_str());
+      elem->SetAttribute("ID", node.registrationName().c_str());
       elem->SetAttribute("name", node.name().c_str());
     }
 
@@ -1499,275 +1365,13 @@ std::string writeTreeNodesModelXML(const BehaviorTreeFactory& factory,
   return std::string(printer.CStr(), size_t(printer.CStrSize() - 1));
 }
 
-std::string writeTreeXSD(const BehaviorTreeFactory& factory)
+std::string writeTreeXSD(const BehaviorTreeFactory& /*factory*/)
 {
-  // There are 2 forms of representation for a node:
-  // compact: <Sequence .../>  and explicit: <Control ID="Sequence" ... />
-  // Only the compact form is supported because the explicit form doesn't
-  // make sense with XSD since we would need to allow any attribute.
-  // Prepare the data
-
-  std::map<std::string, const TreeNodeManifest*> ordered_models;
-  for(const auto& [registration_id, model] : factory.manifests())
-  {
-    ordered_models.insert({ registration_id, &model });
-  }
-
-  XMLDocument doc;
-
-  // Add the XML declaration
-  XMLDeclaration* declaration = doc.NewDeclaration("xml version=\"1.0\" "
-                                                   "encoding=\"UTF-8\"");
-  doc.InsertFirstChild(declaration);
-
-  // Create the root element with namespace and attributes
-  // To validate a BT XML file with `schema.xsd` in the same directory:
-  // <root BTCPP_format="4" main_tree_to_execute="MainTree"
-  //   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  //   xsi:noNamespaceSchemaLocation="schema.xsd">
-  XMLElement* schema_element = doc.NewElement("xs:schema");
-  schema_element->SetAttribute("xmlns:xs", "http://www.w3.org/2001/XMLSchema");
-  schema_element->SetAttribute("elementFormDefault", "qualified");
-  doc.InsertEndChild(schema_element);
-
-  auto parse_and_insert = [&doc](XMLElement* parent_elem, const char* str) {
-    XMLDocument tmp_doc;
-    tmp_doc.Parse(str);
-    if(tmp_doc.Error())
-    {
-      std::cerr << "Internal error parsing existing XML: " << tmp_doc.ErrorStr()
-                << std::endl;
-      return;
-    }
-    for(auto child = tmp_doc.FirstChildElement(); child != nullptr;
-        child = child->NextSiblingElement())
-    {
-      parent_elem->InsertEndChild(child->DeepClone(&doc));
-    }
-  };
-
-  // Common elements.
-  XMLComment* comment = doc.NewComment("Define the common elements");
-  schema_element->InsertEndChild(comment);
-
-  // TODO: add <xs:whiteSpace value="preserve"/> for `inputPortType` and `outputPortType`.
-  parse_and_insert(schema_element, R"(
-    <xs:simpleType name="blackboardType">
-        <xs:restriction base="xs:string">
-            <xs:pattern value="\{.*\}"/>
-        </xs:restriction>
-    </xs:simpleType>
-    <xs:simpleType name="booleanOrBlackboardType">
-      <xs:union memberTypes="xs:boolean blackboardType"/>
-    </xs:simpleType>
-    <xs:simpleType name="integerOrBlackboardType">
-      <xs:union memberTypes="xs:integer blackboardType"/>
-    </xs:simpleType>
-    <xs:simpleType name="decimalOrBlackboardType">
-      <xs:union memberTypes="xs:decimal blackboardType"/>
-    </xs:simpleType>
-    <xs:simpleType name="stringOrBlackboardType">
-      <xs:union memberTypes="xs:string blackboardType"/>
-    </xs:simpleType>
-    <xs:simpleType name="descriptionType">
-        <xs:restriction base="xs:string">
-          <xs:whiteSpace value="preserve"/>
-        </xs:restriction>
-    </xs:simpleType>
-    <xs:complexType name="inputPortType">
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="name" type="xs:string" use="required"/>
-          <xs:attribute name="type" type="xs:string" use="optional"/>
-          <xs:attribute name="default" type="xs:string" use="optional"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-    <xs:complexType name="outputPortType">
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute name="name" type="xs:string" use="required"/>
-          <xs:attribute name="type" type="xs:string" use="optional"/>
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-    <xs:attributeGroup name="preconditionAttributeGroup">
-      <xs:attribute name="_failureIf" type="xs:string" use="optional"/>
-      <xs:attribute name="_skipIf" type="xs:string" use="optional"/>
-      <xs:attribute name="_successIf" type="xs:string" use="optional"/>
-      <xs:attribute name="_while" type="xs:string" use="optional"/>
-    </xs:attributeGroup>
-    <xs:attributeGroup name="postconditionAttributeGroup">
-      <xs:attribute name="_onSuccess" type="xs:string" use="optional"/>
-      <xs:attribute name="_onFailure" type="xs:string" use="optional"/>
-      <xs:attribute name="_post" type="xs:string" use="optional"/>
-      <xs:attribute name="_onHalted" type="xs:string" use="optional"/>
-    </xs:attributeGroup>)");
-
-  // Common attributes
-  // Note that we do not add the `ID` attribute because we do not
-  // support the explicit notation (e.g. <Action ID="Saysomething">).
-  // Cf. https://www.behaviortree.dev/docs/learn-the-basics/xml_format/#compact-vs-explicit-representation
-  // There is no way to check attribute validity with the explicit notation with XSD.
-  // The `ID` attribute for `<SubTree>` is handled separately.
-  parse_and_insert(schema_element, R"(
-    <xs:attributeGroup name="commonAttributeGroup">
-      <xs:attribute name="name" type="xs:string" use="optional"/>
-      <xs:attributeGroup ref="preconditionAttributeGroup"/>
-      <xs:attributeGroup ref="postconditionAttributeGroup"/>
-    </xs:attributeGroup>)");
-
-  // Basic node types
-  parse_and_insert(schema_element, R"(
-    <xs:complexType name="treeNodesModelNodeType">
-      <xs:sequence>
-        <xs:choice minOccurs="0" maxOccurs="unbounded">
-          <xs:element name="input_port" type="inputPortType"/>
-          <xs:element name="output_port" type="outputPortType"/>
-        </xs:choice>
-        <xs:element name="description" type="descriptionType" minOccurs="0" maxOccurs="1"/>
-      </xs:sequence>
-      <xs:attribute name="ID" type="xs:string" use="required"/>
-    </xs:complexType>
-    <xs:group name="treeNodesModelNodeGroup">
-      <xs:choice>
-        <xs:element name="Action" type="treeNodesModelNodeType"/>
-        <xs:element name="Condition" type="treeNodesModelNodeType"/>
-        <xs:element name="Control" type="treeNodesModelNodeType"/>
-        <xs:element name="Decorator" type="treeNodesModelNodeType"/>
-      </xs:choice>
-    </xs:group>
-    )");
-
-  // `root` element
-  const auto root_element_xsd = R"(
-    <xs:element name="root">
-      <xs:complexType>
-        <xs:sequence>
-          <xs:choice minOccurs="0" maxOccurs="unbounded">
-            <xs:element ref="include"/>
-            <xs:element ref="BehaviorTree"/>
-          </xs:choice>
-          <xs:element ref="TreeNodesModel" minOccurs="0" maxOccurs="1"/>
-        </xs:sequence>
-        <xs:attribute name="BTCPP_format" type="xs:string" use="required"/>
-        <xs:attribute name="main_tree_to_execute" type="xs:string" use="optional"/>
-      </xs:complexType>
-    </xs:element>
-  )";
-  parse_and_insert(schema_element, root_element_xsd);
-
-  // Group definition for a single node of any of the existing node types.
-  XMLElement* one_node_group = doc.NewElement("xs:group");
-  {
-    one_node_group->SetAttribute("name", "oneNodeGroup");
-    std::ostringstream xsd;
-    xsd << "<xs:choice>";
-    for(const auto& [registration_id, model] : ordered_models)
-    {
-      xsd << "<xs:element name=\"" << registration_id << "\" type=\"" << registration_id
-          << "Type\"/>";
-    }
-    xsd << "</xs:choice>";
-    parse_and_insert(one_node_group, xsd.str().c_str());
-    schema_element->InsertEndChild(one_node_group);
-  }
-
-  // `include` element
-  parse_and_insert(schema_element, R"(
-    <xs:element name="include">
-      <xs:complexType>
-        <xs:attribute name="path" type="xs:string" use="required"/>
-        <xs:attribute name="ros_pkg" type="xs:string" use="optional"/>
-      </xs:complexType>
-    </xs:element>
-  )");
-
-  // `BehaviorTree` element
-  parse_and_insert(schema_element, R"(
-  <xs:element name="BehaviorTree">
-    <xs:complexType>
-      <xs:group ref="oneNodeGroup"/>
-      <xs:attribute name="ID" type="xs:string" use="required"/>
-    </xs:complexType>
-  </xs:element>
-  )");
-
-  // `TreeNodesModel` element
-  parse_and_insert(schema_element, R"(
-    <xs:element name="TreeNodesModel">
-      <xs:complexType>
-          <xs:group ref="treeNodesModelNodeGroup" minOccurs="0" maxOccurs="unbounded"/>
-      </xs:complexType>
-    </xs:element>
-  )");
-
-  // Definitions for all node types.
-  for(const auto& [registration_id, model] : ordered_models)
-  {
-    XMLElement* type = doc.NewElement("xs:complexType");
-    type->SetAttribute("name", (model->registration_ID + "Type").c_str());
-    if((model->type == NodeType::ACTION) || (model->type == NodeType::CONDITION) ||
-       (model->type == NodeType::SUBTREE))
-    {
-      /* No children, nothing to add. */
-    }
-    else if(model->type == NodeType::DECORATOR)
-    {
-      /* One child. */
-      // <xs:group ref="oneNodeGroup" minOccurs="1" maxOccurs="1"/>
-      XMLElement* group = doc.NewElement("xs:group");
-      group->SetAttribute("ref", "oneNodeGroup");
-      group->SetAttribute("minOccurs", "1");
-      group->SetAttribute("maxOccurs", "1");
-      type->InsertEndChild(group);
-    }
-    else
-    {
-      /* NodeType::CONTROL. */
-      // TODO: check the code, the doc says 1..N but why not 0..N?
-      // <xs:group ref="oneNodeGroup" minOccurs="0" maxOccurs="unbounded"/>
-      XMLElement* group = doc.NewElement("xs:group");
-      group->SetAttribute("ref", "oneNodeGroup");
-      group->SetAttribute("minOccurs", "0");
-      group->SetAttribute("maxOccurs", "unbounded");
-      type->InsertEndChild(group);
-    }
-    XMLElement* common_attr_group = doc.NewElement("xs:attributeGroup");
-    common_attr_group->SetAttribute("ref", "commonAttributeGroup");
-    type->InsertEndChild(common_attr_group);
-    for(const auto& [port_name, port_info] : model->ports)
-    {
-      XMLElement* attr = doc.NewElement("xs:attribute");
-      attr->SetAttribute("name", port_name.c_str());
-      const auto xsd_attribute_type = xsdAttributeType(port_info);
-      if(!xsd_attribute_type.empty())
-      {
-        attr->SetAttribute("type", xsd_attribute_type.c_str());
-      }
-      if(!port_info.defaultValue().empty())
-      {
-        attr->SetAttribute("default", port_info.defaultValueString().c_str());
-      }
-      else
-      {
-        attr->SetAttribute("use", "required");
-      }
-      type->InsertEndChild(attr);
-    }
-    if(model->registration_ID == "SubTree")
-    {
-      parse_and_insert(type, R"(
-        <xs:attribute name="ID" type="xs:string" use="required"/>
-        <xs:anyAttribute processContents="skip"/>
-      )");
-    }
-    schema_element->InsertEndChild(type);
-  }
-
-  XMLPrinter printer;
-  doc.Print(&printer);
-  return std::string(printer.CStr(), size_t(printer.CStrSize() - 1));
+  // Fork divergence: an XSD can only describe node types used as element names,
+  // and node type names in this fork need not be valid XML element names. The
+  // symbol stays for ABI compatibility.
+  throw RuntimeError("writeTreeXSD is not supported in behaviortree_cpp_picknik: node "
+                     "type names need not be valid XML element names");
 }
 
 std::string WriteTreeToXML(const Tree& tree, bool add_metadata, bool add_builtin_models)
