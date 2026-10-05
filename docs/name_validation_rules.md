@@ -1,14 +1,14 @@
 # Name Validation Rules
 
-This document describes the validation rules for names in Groot2 and BehaviorTree.CPP. These rules ensure XML compatibility while supporting Unicode characters (Chinese, Japanese, Korean, etc.).
+This document describes the validation rules for names in Groot2 and BehaviorTree.CPP. These rules ensure XML compatibility while supporting Unicode characters (Chinese, Japanese, Korean, etc.). This fork keeps its 4.7.2 rules instead: model names are not validated, and port names are not checked against the forbidden characters below, except that C++ and `<TreeNodesModel>` port declarations reject whitespace. See [Validation Rules by Name Type](#validation-rules-by-name-type).
 
 ## Overview
 
 The validation uses a **blacklist approach**: all characters are allowed except those explicitly forbidden. This enables Unicode support while blocking characters that would break XML serialization or cause path/filesystem issues.
 
-## Forbidden Characters (Model Names & Port Names)
+## Forbidden Characters
 
-The following ASCII characters are forbidden in **Model Names** and **Port Names**:
+`findForbiddenChar()` reports the following ASCII characters. Upstream rejects them in model and port names. This fork rejects only the whitespace ones, and only in C++ and `<TreeNodesModel>` port declarations:
 
 | Category | Characters | Reason |
 |----------|------------|--------|
@@ -32,15 +32,19 @@ The following ASCII characters are forbidden in **Model Names** and **Port Names
 ## Validation Rules by Name Type
 
 ### Model Name (Node Type Name)
-- **Cannot be empty**
-- **Cannot be "Root"** (reserved)
-- No forbidden characters (see table above)
+This fork does not validate model names, as in 4.7.2. Tree IDs, SubTree IDs and node type names accept any character an XML attribute value can hold, including spaces, `"`, `&`, `/` and `Root`. A node type can only be written as an element, such as `<MyAction/>`, when its name is a valid XML name. Otherwise use `<Action ID="My Action"/>`.
 
 ### Port Name
+This fork keeps its 4.7.2 rules.
+
+Ports declared in C++ (`InputPort`, `OutputPort`, `BidirectionalPort`), and node attributes that the XML parser treats as ports:
 - **Cannot be empty**
-- **Cannot start with a digit**
-- **Cannot be a reserved attribute**: `ID`, `name`, `_description`, `_skipIf`, `_successIf`, `_failureIf`, `_while`, `_onSuccess`, `_onFailure`, `_onHalted`, `_post`, `_autoremap`, `__shared_blackboard`
-- No forbidden characters (see table above)
+- **Must start with an ASCII letter**
+- **Cannot be a reserved attribute**: `ID`, `name`, `_autoremap`, `_skipIf`, `_successIf`, `_failureIf`, `_while`, `_onSuccess`, `_onFailure`, `_onHalted`, `_post`
+- C++ ports also **cannot contain whitespace**
+
+Ports declared for a SubTree in `<TreeNodesModel>`:
+- **Cannot contain whitespace**
 
 ### Instance Name
 - **Can be empty** (defaults to model name)
@@ -86,23 +90,22 @@ static char findForbiddenChar(const std::string& name)
 
 ## Examples
 
-### Valid Model/Port Names
+### Valid Port Names
 ```
-MyAction
-my_action
-My-Action
-检查门状态      (Chinese)
-ドアを開ける    (Japanese)
-Tür_öffnen      (German)
+my_port
+My-Port
+request.name
+goal:pose
+Tür_öffnen      (non-ASCII after the first letter)
 ```
 
-### Invalid Model/Port Names
+### Invalid Port Names
 ```
-My Action       (contains space)
-request.name    (contains period)
-My<Node>        (contains XML chars)
-path/to/node    (contains path separator)
-Root            (reserved)
+my port         (contains whitespace)
+1port           (starts with a digit)
+_private        (starts with an underscore)
+检查门状态      (does not start with an ASCII letter)
+name            (reserved)
 ```
 
 ### Valid Instance Names
@@ -128,7 +131,7 @@ name_with_bell\x07  (control character)
 
 ## Files Modified in BehaviorTree.CPP
 
-- `include/behaviortree_cpp/basic_types.h` - `findForbiddenChar()` declaration
-- `src/basic_types.cpp` - `findForbiddenChar()` implementation, `IsAllowedPortName()` update
-- `src/xml_parsing.cpp` - Validation functions and integration in XML parsing
-- `tests/gtest_name_validation.cpp` - Comprehensive tests for validation
+- `include/behaviortree_cpp/basic_types.h` - `findForbiddenChar()` and `ThrowIfPortNameContainsWhitespace()` declarations
+- `src/basic_types.cpp` - `findForbiddenChar()`, `IsAllowedPortName()` and `ThrowIfPortNameContainsWhitespace()`
+- `src/xml_parsing.cpp` - whitespace check on `<TreeNodesModel>` ports, and instance-name validation
+- `tests/gtest_name_validation.cpp` - tests for the rules above

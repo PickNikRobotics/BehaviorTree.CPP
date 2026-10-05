@@ -428,9 +428,14 @@ struct Timestamp
 
 [[nodiscard]] bool IsReservedAttribute(StringView str);
 
+/// Fork divergence: used by CreatePort and <TreeNodesModel> parsing to reject
+/// port names like "my port", as in the fork's 4.7.2.
+void ThrowIfPortNameContainsWhitespace(StringView name);
+
 /// Returns the first forbidden character found in the name, or '\0' if valid.
 /// Forbidden characters include: space, tab, newline, CR, < > & " ' / \ : * ? | .
 /// and control characters (ASCII 0-31, 127). UTF-8 multibyte sequences are allowed.
+/// Fork divergence: nothing in the fork calls this; names are not checked against it.
 [[nodiscard]] char findForbiddenChar(StringView name);
 
 class TypeInfo
@@ -535,6 +540,7 @@ template <typename T = AnyTypeAllowed>
                        "and must start with an alphabetic character. "
                        "Underscore is reserved.");
   }
+  ThrowIfPortNameContainsWhitespace(sname);
 
   std::pair<std::string, PortInfo> out;
 

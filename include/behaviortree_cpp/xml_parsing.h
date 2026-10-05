@@ -61,9 +61,12 @@ void VerifyXML(const std::string& xml_text,
 /**
  * @brief writeTreeXSD generates an XSD for the nodes defined in the factory
  *
+ * Not supported in behaviortree_cpp_picknik, because node type names need not be
+ * valid XML element names.
+ *
  * @param factory          the factory with the registered types
  *
- * @return  string containing the XML.
+ * @throws RuntimeError always.
  */
 [[nodiscard]] std::string writeTreeXSD(const BehaviorTreeFactory& factory);
 
