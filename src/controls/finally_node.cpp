@@ -1,6 +1,8 @@
 #include "behaviortree_cpp/controls/finally_node.h"
 
+#include <exception>
 #include <iostream>
+#include <utility>
 
 namespace BT
 {
@@ -56,6 +58,7 @@ void FinallyNode::halt()
   }
   in_cleanup_ = false;
   main_status_ = NodeStatus::IDLE;
+  main_exception_ = nullptr;
   resetStatus();
 }
 
@@ -81,6 +84,7 @@ NodeStatus FinallyNode::tick()
   if(!isStatusActive(status()))
   {
     in_cleanup_ = false;
+    main_exception_ = nullptr;
   }
 
   setStatus(NodeStatus::RUNNING);
@@ -93,7 +97,7 @@ NodeStatus FinallyNode::tick()
     }
     catch(...)
     {
-      printCurrentException(name(), "main threw, running cleanup and returning FAILURE");
+      main_exception_ = std::current_exception();
       haltChildNoThrow(0);
       main_status_ = NodeStatus::FAILURE;
     }
@@ -117,6 +121,12 @@ NodeStatus FinallyNode::tick()
 
   resetChildren();
   in_cleanup_ = false;
+  if(main_exception_)
+  {
+    // executeTick() keeps our RUNNING status when tick() throws, and halt() would rerun cleanup.
+    resetStatus();
+    std::rethrow_exception(std::exchange(main_exception_, nullptr));
+  }
   if(cleanup_status == NodeStatus::FAILURE)
   {
     return NodeStatus::FAILURE;

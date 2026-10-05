@@ -2,6 +2,8 @@
 
 #include "behaviortree_cpp/control_node.h"
 
+#include <exception>
+
 namespace BT
 {
 /**
@@ -9,8 +11,8 @@ namespace BT
  * second child ("cleanup"), like try/finally.
  *
  * - Cleanup runs after main returns SUCCESS, FAILURE or SKIPPED.
- * - If main throws (any type), the exception is printed to stderr, main is
- *   halted, cleanup runs, and this node returns FAILURE.
+ * - If main throws (any type), main is halted, cleanup runs, and then the
+ *   exception is rethrown.
  * - The node returns main's status, or FAILURE if cleanup fails.
  * - If this node is halted while main is RUNNING, main is halted and cleanup
  *   is ticked once, synchronously, on the thread calling halt(). Halt-time
@@ -49,6 +51,7 @@ public:
 private:
   bool in_cleanup_ = false;
   NodeStatus main_status_ = NodeStatus::IDLE;
+  std::exception_ptr main_exception_;
 
   void haltChildNoThrow(size_t i);
 

@@ -123,15 +123,15 @@ TEST_F(FinallyTest, CleanupFails_ReturnsFailure)
   EXPECT_EQ(run("<AlwaysSuccess/>", "<AlwaysFailure/>"), NodeStatus::FAILURE);
 }
 
-TEST_F(FinallyTest, MainThrows_CleanupRunsAndReturnsFailure)
+TEST_F(FinallyTest, MainThrows_CleanupRunsThenRethrows)
 {
-  EXPECT_EQ(run("<Throw/>"), NodeStatus::FAILURE);
+  EXPECT_THROW(run("<Throw/>"), BT::RuntimeError);
   EXPECT_EQ(cleanup_count, 1);
 }
 
-TEST_F(FinallyTest, NestedMainThrows_CleanupRunsAndReturnsFailure)
+TEST_F(FinallyTest, NestedMainThrows_CleanupRunsThenRethrows)
 {
-  EXPECT_EQ(run("<Sequence><AlwaysSuccess/><Throw/></Sequence>"), NodeStatus::FAILURE);
+  EXPECT_THROW(run("<Sequence><AlwaysSuccess/><Throw/></Sequence>"), BT::RuntimeError);
   EXPECT_EQ(cleanup_count, 1);
 }
 
@@ -219,7 +219,7 @@ TEST_F(FinallyTest, AsyncCleanup_ReturnsMainStatusWhenCleanupCompletes)
 
 TEST_F(FinallyTest, AsyncMainThrows_MainHaltedAndCleanupRuns)
 {
-  EXPECT_EQ(run("<AsyncThrow/>"), NodeStatus::FAILURE);
+  EXPECT_THROW(run("<AsyncThrow/>"), BT::RuntimeError);
   EXPECT_EQ(main_halted, 1);
   EXPECT_EQ(cleanup_count, 1);
 }
@@ -276,7 +276,7 @@ TEST_F(FinallyTest, CleanupThrowsDuringHalt_DoesNotPropagate)
 
 TEST_F(FinallyTest, MainThrowsAndItsHaltThrows_CleanupStillRuns)
 {
-  EXPECT_EQ(run("<AsyncThrowHaltThrows/>"), NodeStatus::FAILURE);
+  EXPECT_THROW(run("<AsyncThrowHaltThrows/>"), BT::RuntimeError);
   EXPECT_EQ(main_halted, 1);
   EXPECT_EQ(cleanup_count, 1);
 }
@@ -294,9 +294,9 @@ TEST_F(FinallyTest, HaltWhereMainHaltThrows_CleanupRunsAndNothingPropagates)
   EXPECT_EQ(cleanup_count, 1);
 }
 
-TEST_F(FinallyTest, MainThrowsNonStdException_CleanupRunsAndReturnsFailure)
+TEST_F(FinallyTest, MainThrowsNonStdException_CleanupRunsThenRethrows)
 {
-  EXPECT_EQ(run("<ThrowInt/>"), NodeStatus::FAILURE);
+  EXPECT_THROW(run("<ThrowInt/>"), int);
   EXPECT_EQ(cleanup_count, 1);
 }
 
@@ -414,4 +414,41 @@ TEST_F(FinallyTest, CleanupFailsDuringHalt_IsReported)
   EXPECT_NE(testing::internal::GetCapturedStderr().find("cleanup returned FAILURE during "
                                                         "halt"),
             std::string::npos);
+}
+
+TEST_F(FinallyTest, MainThrows_HaltAfterRethrowDoesNotRerunCleanup)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><Throw/><Cleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, MainThrowsWithAsyncCleanup_RethrowsWhenCleanupCompletes)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><Throw/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+  EXPECT_EQ(cleanup_ticks, 2);
+}
+
+TEST_F(FinallyTest, MainThrows_NextTickStartsFresh)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><ThrowOnce/><Cleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
+  EXPECT_EQ(throw_once_ticks, 2);
+  EXPECT_EQ(cleanup_count, 2);
 }
