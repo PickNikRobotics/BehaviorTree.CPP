@@ -1,5 +1,6 @@
 #include "behaviortree_cpp/bt_factory.h"
 
+#include <chrono>
 #include <stdexcept>
 
 #include <gtest/gtest.h>
@@ -53,6 +54,33 @@ private:
   bool throw_on_halt_;
 };
 
+// RUNNING on start, SUCCESS on the next tick. Counts how often it starts.
+class TwoTickMain : public BT::StatefulActionNode
+{
+public:
+  TwoTickMain(const std::string& name, const BT::NodeConfig& config, int* starts)
+    : StatefulActionNode(name, config), starts_(starts)
+  {}
+  static BT::PortsList providedPorts()
+  {
+    return {};
+  }
+  NodeStatus onStart() override
+  {
+    (*starts_)++;
+    return NodeStatus::RUNNING;
+  }
+  NodeStatus onRunning() override
+  {
+    return NodeStatus::SUCCESS;
+  }
+  void onHalted() override
+  {}
+
+private:
+  int* starts_;
+};
+
 class FinallyTest : public testing::Test
 {
 protected:
@@ -62,6 +90,9 @@ protected:
   int main_halted = 0;
   int cleanup_ticks = 0;
   int throw_once_ticks = 0;
+  int spin_ticks = 0;
+  int two_tick_starts = 0;
+  int second_tick_ticks = 0;
   bool gate = true;
 
   void SetUp() override
@@ -88,6 +119,23 @@ protected:
         throw TestError("once");
       }
       return NodeStatus::SUCCESS;
+    });
+    factory.registerNodeType<TwoTickMain>("TwoTickMain", &two_tick_starts);
+    factory.registerSimpleCondition("Spin", [this](BT::TreeNode&) {
+      spin_ticks++;
+      return NodeStatus::RUNNING;
+    });
+    // RUNNING on its first tick, then throws on its second
+    factory.registerSimpleCondition("RunThenThrow", [this](BT::TreeNode&) -> NodeStatus {
+      if(++second_tick_ticks < 2)
+      {
+        return NodeStatus::RUNNING;
+      }
+      throw TestError("late boom");
+    });
+    // RUNNING on its first tick, then FAILURE
+    factory.registerSimpleCondition("RunThenFail", [this](BT::TreeNode&) {
+      return ++second_tick_ticks < 2 ? NodeStatus::RUNNING : NodeStatus::FAILURE;
     });
     factory.registerSimpleCondition("Gate", [this](BT::TreeNode&) {
       return gate ? NodeStatus::SUCCESS : NodeStatus::FAILURE;
@@ -242,7 +290,7 @@ TEST_F(FinallyTest, HaltWhileMainRunning_MainHalted)
   EXPECT_EQ(cleanup_count, 1);
 }
 
-TEST_F(FinallyTest, HaltWhileCleanupRunning_CleanupNotRestarted)
+TEST_F(FinallyTest, HaltWhileCleanupRunning_CleanupFinishes)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
@@ -251,10 +299,11 @@ TEST_F(FinallyTest, HaltWhileCleanupRunning_CleanupNotRestarted)
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   tree.haltTree();
-  EXPECT_EQ(cleanup_ticks, 1);
+  EXPECT_EQ(cleanup_ticks, 2);
+  EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
 }
 
-TEST_F(FinallyTest, HaltCleanupRunning_CleanupHalted)
+TEST_F(FinallyTest, HaltWhileMainRunning_AsyncCleanupFinishes)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
@@ -263,7 +312,41 @@ TEST_F(FinallyTest, HaltCleanupRunning_CleanupHalted)
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   tree.haltTree();
-  EXPECT_EQ(cleanup_ticks, 1);
+  EXPECT_EQ(cleanup_ticks, 2);
+  EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
+}
+
+TEST_F(FinallyTest, HaltWhileMainRunning_EveryStepOfAsyncCleanupRuns)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally>
+        <AlwaysRunning/>
+        <Sequence><AsyncCleanup/><Cleanup/></Sequence>
+      </Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_ticks, 2);
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, HaltWithCleanupThatNeverFinishes_HaltsItAfterTimeout)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="50"><AlwaysSuccess/><Spin/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  const auto start = std::chrono::steady_clock::now();
+  tree.haltTree();
+  const auto elapsed = std::chrono::steady_clock::now() - start;
+  EXPECT_GE(elapsed, std::chrono::milliseconds(50));
+  EXPECT_LT(elapsed, std::chrono::seconds(5));
+  // At least one tick from the run and one more during the halt.
+  EXPECT_GE(spin_ticks, 2);
   EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
 }
 
@@ -316,7 +399,7 @@ TEST_F(FinallyTest, CleanupThrowsNonStdExceptionDuringHalt_DoesNotPropagate)
   EXPECT_NO_THROW(tree.haltTree());
 }
 
-TEST_F(FinallyTest, CleanupThrows_NextTickRetriesCleanupOnly)
+TEST_F(FinallyTest, CleanupThrows_EndsTheRunAndHaltDoesNotRetry)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
@@ -326,8 +409,12 @@ TEST_F(FinallyTest, CleanupThrows_NextTickRetriesCleanupOnly)
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+  tree.haltTree();
+  EXPECT_EQ(throw_once_ticks, 1);
+
+  // The next tick starts again with main.
   EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
-  EXPECT_EQ(main_ticks, 3);
+  EXPECT_EQ(main_ticks, 4);
   EXPECT_EQ(throw_once_ticks, 2);
 }
 
@@ -456,4 +543,64 @@ TEST_F(FinallyTest, MainThrows_NextTickStartsFresh)
   EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
   EXPECT_EQ(throw_once_ticks, 2);
   EXPECT_EQ(cleanup_count, 2);
+}
+
+TEST_F(FinallyTest, CleanupThrowsAfterRunningDuringHalt_DoesNotPropagate)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning/><RunThenThrow/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_NO_THROW(tree.haltTree());
+  EXPECT_EQ(second_tick_ticks, 2);
+  EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
+}
+
+TEST_F(FinallyTest, CleanupFailsAfterRunningDuringHalt_IsReported)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning/><RunThenFail/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  testing::internal::CaptureStderr();
+  tree.haltTree();
+  EXPECT_NE(testing::internal::GetCapturedStderr().find("cleanup returned FAILURE during "
+                                                        "halt"),
+            std::string::npos);
+  EXPECT_EQ(second_tick_ticks, 2);
+}
+
+TEST_F(FinallyTest, UnreadableHaltTimeout_FallsBackToDefault)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="{missing}"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  testing::internal::CaptureStderr();
+  tree.haltTree();
+  EXPECT_NE(testing::internal::GetCapturedStderr().find("cannot read halt_timeout_msec"),
+            std::string::npos);
+  EXPECT_EQ(cleanup_ticks, 2);
+}
+
+TEST_F(FinallyTest, CleanupThrows_StatefulMainRestartsOnNextTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><TwoTickMain/><ThrowOnce/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_THROW(tree.tickOnce(), BT::RuntimeError);
+
+  // Main was reset with the node, so it starts again rather than reporting its old result.
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  EXPECT_EQ(two_tick_starts, 2);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
 }

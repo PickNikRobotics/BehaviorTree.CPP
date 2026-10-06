@@ -14,18 +14,20 @@ namespace BT
  * - If main throws (any type), main is halted, cleanup runs, and then the
  *   exception is rethrown.
  * - The node returns main's status, or FAILURE if cleanup fails.
- * - If this node is halted while main is RUNNING, main is halted and cleanup
- *   is ticked once, synchronously, on the thread calling halt(). Halt-time
- *   cleanup must therefore be synchronous: if it returns RUNNING, it is halted.
- *   A slow cleanup delays the parent, for example a ReactiveSequence whose
- *   condition changed. Call halt() from the thread that ticks the tree.
- * - If this node is halted while cleanup is RUNNING, cleanup is halted and
- *   does not finish.
- * - Exceptions thrown by cleanup propagate from tick(), and the next tick
- *   retries cleanup. If the tree is halted instead, cleanup is not retried.
- * - halt() never throws, because it also runs from ~Tree(). It prints
- *   exceptions from cleanup or from halting a child, and a cleanup FAILURE,
- *   to stderr.
+ * - If this node is halted while main or cleanup is RUNNING, main is halted
+ *   and cleanup is ticked again every 10 ms on the thread calling halt(), so
+ *   asynchronous cleanup can finish. This stops when cleanup finishes, fails
+ *   or throws, or when "halt_timeout_msec" runs out, in which case cleanup is
+ *   halted unfinished. Cleanup always gets at least one tick, and one tick
+ *   that blocks is not cut short. halt() blocks its caller, and any lock the
+ *   caller holds, until then, so a slow cleanup also delays a parent such as
+ *   a ReactiveSequence. Call halt() from the thread that ticks the tree.
+ * - An exception thrown by cleanup in tick() halts cleanup, leaves the node
+ *   IDLE and propagates. It replaces main's status, or main's exception,
+ *   which is dropped. The next tick starts with main.
+ * - halt() never throws, because it also runs from ~Tree(). It prints to
+ *   stderr when cleanup throws, fails or times out, and when halting a child
+ *   throws. A pending exception from main is dropped by a halt.
  *
  * Requires exactly 2 children, checked when the XML is loaded and on tick.
  */
@@ -43,17 +45,22 @@ public:
 
   static PortsList providedPorts()
   {
-    return {};
+    return { InputPort<unsigned>("halt_timeout_msec", kDefaultHaltTimeoutMsec,
+                                 "When halted, how long to keep ticking cleanup "
+                                 "before halting it unfinished, in milliseconds") };
   }
 
   void halt() override;
 
 private:
+  static constexpr unsigned kDefaultHaltTimeoutMsec = 10000;
+
   bool in_cleanup_ = false;
   NodeStatus main_status_ = NodeStatus::IDLE;
   std::exception_ptr main_exception_;
 
   void haltChildNoThrow(size_t i);
+  void finishCleanupDuringHalt();
 
   BT::NodeStatus tick() override;
 };
