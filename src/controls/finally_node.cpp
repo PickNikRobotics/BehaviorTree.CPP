@@ -1,6 +1,5 @@
 #include "behaviortree_cpp/controls/finally_node.h"
 
-#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <iostream>
@@ -81,15 +80,16 @@ void FinallyNode::finishCleanupDuringHalt()
     NodeStatus cleanup_status = children_nodes_[1]->executeTick();
     while(cleanup_status == NodeStatus::RUNNING)
     {
-      const auto now = std::chrono::steady_clock::now();
-      if(now >= deadline)
+      // Start no tick after the deadline, so a tick that blocks cannot extend the wait.
+      const auto next_tick = std::chrono::steady_clock::now() + kHaltTickPeriod;
+      if(next_tick > deadline)
       {
         std::cerr << "[" << name()
                   << "]: cleanup did not finish within halt_timeout_msec ("
                   << timeout_msec << " ms), halting it unfinished" << std::endl;
         return;
       }
-      std::this_thread::sleep_until(std::min(now + kHaltTickPeriod, deadline));
+      std::this_thread::sleep_until(next_tick);
       cleanup_status = children_nodes_[1]->executeTick();
     }
     if(cleanup_status == NodeStatus::FAILURE)

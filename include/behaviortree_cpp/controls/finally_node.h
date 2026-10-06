@@ -18,8 +18,8 @@ namespace BT
  *   and cleanup is ticked again every 10 ms on the thread calling halt(), so
  *   asynchronous cleanup can finish. This stops when cleanup finishes, fails
  *   or throws, or when "halt_timeout_msec" runs out, in which case cleanup is
- *   halted unfinished. Cleanup always gets at least one tick, and one tick
- *   that blocks is not cut short. halt() blocks its caller, and any lock the
+ *   halted unfinished. Cleanup always gets at least one tick, no later tick
+ *   starts after the timeout, and a tick that blocks is not cut short. halt() blocks its caller, and any lock the
  *   caller holds, until then, so a slow cleanup also delays a parent such as
  *   a ReactiveSequence. Call halt() from the thread that ticks the tree.
  * - An exception thrown by cleanup in tick() halts cleanup, leaves the node

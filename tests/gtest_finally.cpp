@@ -343,7 +343,8 @@ TEST_F(FinallyTest, HaltWithCleanupThatNeverFinishes_HaltsItAfterTimeout)
   const auto start = std::chrono::steady_clock::now();
   tree.haltTree();
   const auto elapsed = std::chrono::steady_clock::now() - start;
-  EXPECT_GE(elapsed, std::chrono::milliseconds(50));
+  // The wait stops before a tick that would start after the timeout, up to one 10 ms period early.
+  EXPECT_GE(elapsed, std::chrono::milliseconds(40));
   EXPECT_LT(elapsed, std::chrono::seconds(5));
   // At least one tick from the run and one more during the halt.
   EXPECT_GE(spin_ticks, 2);
