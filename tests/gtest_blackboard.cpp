@@ -13,6 +13,8 @@
 #include "behaviortree_cpp/blackboard.h"
 #include "behaviortree_cpp/bt_factory.h"
 
+#include <utility>
+
 #include <gtest/gtest.h>
 
 #include "../sample_nodes/dummy_nodes.h"
@@ -839,4 +841,202 @@ TEST(BlackboardTest, GetLockedPortContentWithDefault_Issue942)
 
   // The value should be accessible from the blackboard
   ASSERT_EQ(tree.rootBlackboard()->get<int>("value"), 42);
+}
+
+TEST(BlackboardTest, UnsetMissingKeyIsIdempotent)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->addSubtreeRemapping("inner", "outer");
+  child->enableAutoRemapping(true);
+  parent->set("keep", 42);
+
+  for(const auto& key : { "", "missing", "inner", "@missing", "_missing" })
+  {
+    SCOPED_TRACE(key);
+    child->unset(key);
+    child->unset(key);
+    EXPECT_EQ(child->getEntry(key), nullptr);
+  }
+  EXPECT_EQ(parent->get<int>("keep"), 42);
+}
+
+TEST(BlackboardTest, UnsetLocalKeyDoesNotEraseParent)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  parent->set("value", 42);
+  child->set("value", 7);
+
+  child->unset("value");
+
+  EXPECT_EQ(child->getEntry("value"), nullptr);
+  EXPECT_EQ(parent->get<int>("value"), 42);
+}
+
+TEST(BlackboardTest, UnsetFollowsExplicitRemappingAndAllowsRewrite)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  auto sibling = Blackboard::create(parent);
+  child->addSubtreeRemapping("inner", "outer");
+  sibling->addSubtreeRemapping("alias", "outer");
+  parent->set("outer", 42);
+  ASSERT_EQ(child->get<int>("inner"), 42);
+
+  child->unset("inner");
+
+  EXPECT_EQ(parent->getEntry("outer"), nullptr);
+  EXPECT_EQ(child->getEntry("inner"), nullptr);
+  EXPECT_EQ(sibling->getEntry("alias"), nullptr);
+  child->set("inner", 7);
+  EXPECT_EQ(parent->get<int>("outer"), 7);
+  EXPECT_EQ(sibling->get<int>("alias"), 7);
+}
+
+TEST(BlackboardTest, UnsetExplicitRemappingOverridesAutoRemapping)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->addSubtreeRemapping("inner", "outer");
+  child->enableAutoRemapping(true);
+  parent->set("inner", 7);
+  parent->set("outer", 42);
+
+  child->unset("inner");
+
+  EXPECT_EQ(parent->getEntry("outer"), nullptr);
+  EXPECT_EQ(parent->get<int>("inner"), 7);
+}
+
+TEST(BlackboardTest, UnsetAutoRemappingKeepsPrivateKeysLocal)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->enableAutoRemapping(true);
+  parent->set("shared", 42);
+  parent->set("_private", 7);
+  child->set("_private", 1);
+
+  child->unset("shared");
+  child->unset("_private");
+  child->unset("_private");
+
+  EXPECT_EQ(parent->getEntry("shared"), nullptr);
+  EXPECT_EQ(child->getEntry("shared"), nullptr);
+  EXPECT_EQ(child->getEntry("_private"), nullptr);
+  EXPECT_EQ(parent->get<int>("_private"), 7);
+}
+
+TEST(BlackboardTest, UnsetPrivateKeyFollowsExplicitRemapping)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->addSubtreeRemapping("_inner", "outer");
+  child->enableAutoRemapping(true);
+  parent->set("outer", 42);
+
+  child->unset("_inner");
+
+  EXPECT_EQ(parent->getEntry("outer"), nullptr);
+  EXPECT_EQ(child->getEntry("_inner"), nullptr);
+}
+
+TEST(BlackboardTest, UnsetFollowsNestedRemapping)
+{
+  auto root = Blackboard::create();
+  auto middle = Blackboard::create(root);
+  auto leaf = Blackboard::create(middle);
+  middle->addSubtreeRemapping("middle_key", "root_key");
+  leaf->addSubtreeRemapping("leaf_key", "middle_key");
+  root->set("root_key", 42);
+
+  leaf->unset("leaf_key");
+
+  EXPECT_EQ(root->getEntry("root_key"), nullptr);
+  EXPECT_EQ(middle->getEntry("middle_key"), nullptr);
+  EXPECT_EQ(leaf->getEntry("leaf_key"), nullptr);
+}
+
+TEST(BlackboardTest, UnsetRootPrefixBypassesLocalKeysAndRemapping)
+{
+  auto root = Blackboard::create();
+  auto middle = Blackboard::create(root);
+  auto leaf = Blackboard::create(middle);
+  root->set("value", 42);
+  middle->set("value", 7);
+  leaf->set("value", 1);
+  leaf->addSubtreeRemapping("value", "other");
+
+  leaf->unset("@value");
+
+  EXPECT_EQ(root->getEntry("value"), nullptr);
+  EXPECT_EQ(middle->get<int>("value"), 7);
+  EXPECT_EQ(leaf->get<int>("value"), 1);
+  root->set("value", 42);
+  root->unset("@value");
+  EXPECT_EQ(root->getEntry("value"), nullptr);
+}
+
+TEST(BlackboardTest, UnsetLocalEntryTakesPrecedenceOverRemapping)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->set("inner", 7);
+  parent->set("outer", 42);
+  child->addSubtreeRemapping("inner", "outer");
+  child->enableAutoRemapping(true);
+  ASSERT_EQ(child->get<int>("inner"), 7);
+
+  child->unset("inner");
+
+  EXPECT_EQ(parent->get<int>("outer"), 42);
+  EXPECT_EQ(child->get<int>("inner"), 42);
+}
+
+TEST(BlackboardTest, UnsetWithExpiredParentIsNoOp)
+{
+  auto parent = Blackboard::create();
+  auto child = Blackboard::create(parent);
+  child->addSubtreeRemapping("inner", "outer");
+  child->enableAutoRemapping(true);
+  parent.reset();
+
+  child->unset("inner");
+  child->unset("shared");
+  child->unset("@root_key");
+
+  EXPECT_EQ(child->getEntry("inner"), nullptr);
+  EXPECT_EQ(child->getEntry("shared"), nullptr);
+  EXPECT_EQ(child->getEntry("root_key"), nullptr);
+}
+
+TEST(BlackboardTest, UnsetBlackboardNodeClearsRemappedSubtreeVariable)
+{
+  for(const auto& [remapping, key] :
+      { std::pair{ "inner=\"{outer}\"", "inner" },
+        std::pair{ "_autoremap=\"true\"", "outer" }, std::pair{ "", "@outer" } })
+  {
+    SCOPED_TRACE(key);
+    BehaviorTreeFactory factory;
+    const std::string xml = StrCat(R"(
+      <root BTCPP_format="4" main_tree_to_execute="Main">
+        <BehaviorTree ID="Main">
+          <Sequence>
+            <SetBlackboard output_key="outer" value="42"/>
+            <SubTree ID="Clear" )",
+                                   remapping, R"(/>
+          </Sequence>
+        </BehaviorTree>
+        <BehaviorTree ID="Clear">
+          <UnsetBlackboard key=")",
+                                   key, R"("/>
+        </BehaviorTree>
+      </root>)");
+    auto tree = factory.createTreeFromText(xml);
+
+    EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
+    EXPECT_EQ(tree.rootBlackboard()->getEntry("outer"), nullptr);
+    EXPECT_EQ(tree.subtrees.at(1)->blackboard->getEntry(key), nullptr);
+  }
 }

@@ -126,6 +126,8 @@ public:
   template <typename T>
   void set(const std::string& key, const T& value);
 
+  /// Remove the entry resolved by getEntry(), including SubTree remaps and '@' root keys.
+  /// A missing entry is a no-op.
   void unset(const std::string& key);
 
   [[nodiscard]] const TypeInfo* entryInfo(const std::string& key);
@@ -266,17 +268,34 @@ inline T Blackboard::get(const std::string& key) const
 
 inline void Blackboard::unset(const std::string& key)
 {
-  std::unique_lock storage_lock(storage_mutex_);
-
-  // check local storage
-  auto it = storage_.find(key);
-  if(it == storage_.end())
+  if(StartWith(key, '@'))
   {
-    // No entry, nothing to do.
+    rootBlackboard()->unset(key.substr(1, key.size() - 1));
     return;
   }
 
-  storage_.erase(it);
+  {
+    std::unique_lock storage_lock(storage_mutex_);
+    auto it = storage_.find(key);
+    if(it != storage_.end())
+    {
+      storage_.erase(it);
+      return;
+    }
+  }
+  // Release the local storage lock before following the same remapping as getEntry().
+  if(auto parent = parent_bb_.lock())
+  {
+    auto remap_it = internal_to_external_.find(key);
+    if(remap_it != internal_to_external_.cend())
+    {
+      parent->unset(remap_it->second);
+    }
+    else if(autoremapping_ && !StartWith(key, '_'))
+    {
+      parent->unset(key);
+    }
+  }
 }
 
 template <typename T>
