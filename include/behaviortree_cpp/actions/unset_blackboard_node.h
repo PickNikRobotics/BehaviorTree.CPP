@@ -17,7 +17,9 @@
 namespace BT
 {
 /**
- * Action that removes an entry from the blackboard and return SUCCESS.
+ * Action that removes an entry from the blackboard and returns SUCCESS.
+ * The key follows SubTree remaps, automatic remapping, and the '@' root prefix.
+ * Missing entries are a no-op; private keys beginning with '_' are not automatically remapped.
  */
 class UnsetBlackboardNode : public SyncActionNode
 {
