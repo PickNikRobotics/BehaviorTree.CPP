@@ -110,7 +110,7 @@ include/behaviortree_cpp/
 ├── controls/          # Control node headers
 ├── decorators/        # Decorator node headers
 ├── loggers/           # Logger headers
-├── scripting/         # Script parser (lexy-based)
+├── scripting/         # Script parser
 └── contrib/           # Third-party contributions
 ```
 
@@ -122,7 +122,7 @@ include/behaviortree_cpp/
 
 ### Vendored Dependencies
 
-All in `3rdparty/`: TinyXML2, cppzmq, flatbuffers, lexy, minicoro, minitrace. Controlled via `USE_VENDORED_*` CMake options.
+All in `3rdparty/`: TinyXML2, cppzmq, flatbuffers, minicoro, minitrace. Controlled via `USE_VENDORED_*` CMake options.
 
 ## Contributing
 
