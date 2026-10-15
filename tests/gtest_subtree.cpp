@@ -961,21 +961,23 @@ TEST(SubTree, SubstringTreeIDsAreNotRecursive)
   ASSERT_NO_THROW(auto tree = factory.createTreeFromText(xml_text));
 }
 
-// Test for Groot2 issue #56: duplicate _fullpath when multiple subtrees have the same name
-// https://github.com/BehaviorTree/Groot2/issues/56
-//
-// When two SubTree nodes under the same parent have the same "name" attribute,
-// tree creation should fail with a clear error message.
-TEST(SubTree, DuplicateSubTreeName_Groot2Issue56)
+// PickNik fork: MoveIt Pro 10.1 and earlier ran on 4.7.2, which accepts SubTree nodes that share a
+// `name`, and the MoveIt Pro editor writes name=ID on every SubTree it adds. Upstream rejects them
+// since 4.8.4 (Groot2 issue #56). The fork accepts them until MoveIt Pro 11.0
+// (PickNikRobotics/moveit_pro#23867). The instances share a path, as they did in 4.7.2.
+TEST(SubTree, DuplicateSubTreeName_AcceptedAsIn472)
 {
   // clang-format off
   static const char* xml_text = R"(
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
-        <ParallelAll>
+        <Fallback>
+            <Sequence>
+                <SubTree ID="Worker" name="my_worker"/>
+                <SubTree ID="Worker" name="my_worker"/>
+            </Sequence>
             <SubTree ID="Worker" name="my_worker"/>
-            <SubTree ID="Worker" name="my_worker"/>
-        </ParallelAll>
+        </Fallback>
     </BehaviorTree>
 
     <BehaviorTree ID="Worker">
@@ -986,25 +988,27 @@ TEST(SubTree, DuplicateSubTreeName_Groot2Issue56)
   // clang-format on
 
   BehaviorTreeFactory factory;
+  Tree tree = factory.createTreeFromText(xml_text);
 
-  // Should throw RuntimeError because of duplicate SubTree names
-  ASSERT_THROW((void)factory.createTreeFromText(xml_text), RuntimeError);
+  ASSERT_EQ(tree.subtrees.size(), 4);
+  for(size_t i = 1; i < tree.subtrees.size(); i++)
+  {
+    EXPECT_EQ(tree.subtrees[i]->instance_name, "my_worker");
+  }
+  ASSERT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
 }
 
-// Additional test to verify the error message content
-TEST(SubTree, DuplicateSubTreeName_ErrorMessage)
+// An empty name at the top of the main tree gives the SubTree the root's empty path.
+TEST(SubTree, EmptySubTreeNameAtRoot_AcceptedAsIn472)
 {
   // clang-format off
   static const char* xml_text = R"(
 <root BTCPP_format="4" main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
-        <Sequence>
-            <SubTree ID="Task" name="my_task"/>
-            <SubTree ID="Task" name="my_task"/>
-        </Sequence>
+        <SubTree ID="Worker" name=""/>
     </BehaviorTree>
 
-    <BehaviorTree ID="Task">
+    <BehaviorTree ID="Worker">
         <AlwaysSuccess/>
     </BehaviorTree>
 </root>
@@ -1012,20 +1016,8 @@ TEST(SubTree, DuplicateSubTreeName_ErrorMessage)
   // clang-format on
 
   BehaviorTreeFactory factory;
-
-  try
-  {
-    (void)factory.createTreeFromText(xml_text);
-    FAIL() << "Expected RuntimeError to be thrown";
-  }
-  catch(const RuntimeError& e)
-  {
-    std::string msg = e.what();
-    EXPECT_TRUE(msg.find("Duplicate SubTree path") != std::string::npos)
-        << "Error message should mention 'Duplicate SubTree path'. Got: " << msg;
-    EXPECT_TRUE(msg.find("my_task") != std::string::npos)
-        << "Error message should mention the duplicate path 'my_task'. Got: " << msg;
-  }
+  Tree tree = factory.createTreeFromText(xml_text);
+  ASSERT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
 }
 
 // Test that unique names under the same parent work correctly
@@ -1096,30 +1088,4 @@ TEST(SubTree, NoNameAttribute_AutoGeneratesUniquePaths)
   ASSERT_EQ(tree.subtrees.size(), 3);
   auto status = tree.tickWhileRunning();
   ASSERT_EQ(status, NodeStatus::SUCCESS);
-}
-
-// Test nested subtrees - duplicate names at the same level should fail
-TEST(SubTree, NestedDuplicateNames_ShouldFail)
-{
-  // clang-format off
-  static const char* xml_text = R"(
-<root BTCPP_format="4" main_tree_to_execute="MainTree">
-    <BehaviorTree ID="MainTree">
-        <Sequence>
-            <SubTree ID="Level1" name="task"/>
-            <SubTree ID="Level1" name="task"/>
-        </Sequence>
-    </BehaviorTree>
-
-    <BehaviorTree ID="Level1">
-        <AlwaysSuccess name="work"/>
-    </BehaviorTree>
-</root>
-)";
-  // clang-format on
-
-  BehaviorTreeFactory factory;
-
-  // Should throw RuntimeError because of duplicate SubTree names
-  ASSERT_THROW((void)factory.createTreeFromText(xml_text), RuntimeError);
 }
