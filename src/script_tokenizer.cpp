@@ -239,11 +239,11 @@ std::vector<Token> tokenize(const std::string& source)
 
     const size_t start = i;
 
-    // Single-quoted string literal
-    if(c == '\'')
+    // String literal: the closing quote must match the opening quote.
+    if(c == '\'' || c == '"')
     {
       ++i;
-      while(i < len && source[i] != '\'')
+      while(i < len && source[i] != c)
       {
         ++i;
       }
