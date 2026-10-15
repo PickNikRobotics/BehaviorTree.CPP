@@ -85,6 +85,104 @@ TEST(ParserTest, AnyTypes)
   EXPECT_EQ(result.value().cast<int>(), 0);
 }
 
+TEST(ParserTest, StringLiteralQuotes)
+{
+  struct TestCase
+  {
+    const char* script;
+    const char* expected;
+  };
+  const TestCase cases[] = {
+    { "'hello world '", "hello world " },
+    { R"("hello world ")", "hello world " },
+    { "''", "" },
+    { R"("")", "" },
+    { R"('say "hello"')", "say \"hello\"" },
+    { R"("it's ready")", "it's ready" },
+    { R"('path\to\file')", R"(path\to\file)" },
+    { R"("path\to\file")", R"(path\to\file)" },
+    { "'first\nsecond'", "first\nsecond" },
+    { "\"first\nsecond\"", "first\nsecond" },
+    { R"('single'.."double")", "singledouble" },
+  };
+  BT::Ast::Environment env = { BT::Blackboard::create(), {} };
+  for(const auto& test : cases)
+  {
+    SCOPED_TRACE(test.script);
+    auto result = BT::ParseScriptAndExecute(env, test.script);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().cast<std::string>(), test.expected);
+  }
+
+  EXPECT_FALSE(BT::ValidateScript("'unterminated"));
+  EXPECT_FALSE(BT::ValidateScript(R"("unterminated)"));
+  EXPECT_FALSE(BT::ValidateScript(R"("mismatched')"));
+  EXPECT_FALSE(BT::ValidateScript(R"('mismatched")"));
+}
+
+TEST(ParserTest, DoubleQuotedObjectiveExpressions)
+{
+  BT::Ast::Environment env = { BT::Blackboard::create(), {} };
+  env.vars->set("viz_idx", 3);
+  env.vars->set("index", 2);
+  env.vars->set("prompt", std::string("bottles"));
+  env.vars->set("tool_object_name", std::string("tool"));
+  env.vars->set("execute_trajectories", std::string("true"));
+
+  EXPECT_EQ(GetScriptResult(env, R"(viz_marker_name:="place_pose_"..viz_idx)")
+                .cast<std::string>(),
+            "place_pose_3");
+  EXPECT_EQ(GetScriptResult(env, R"(mask_label:="mask "..index)").cast<std::string>(),
+            "mask 2");
+  EXPECT_EQ(
+      GetScriptResult(env, R"(header := "SAM3 prompt="..prompt)").cast<std::string>(),
+      "SAM3 prompt=bottles");
+  EXPECT_EQ(env.vars->get<std::string>("viz_marker_name"), "place_pose_3");
+  EXPECT_EQ(env.vars->get<std::string>("mask_label"), "mask 2");
+  EXPECT_EQ(env.vars->get<std::string>("header"), "SAM3 prompt=bottles");
+
+  EXPECT_EQ(GetScriptResult(env, R"(tool_object_name!="")").cast<int>(), 1);
+  EXPECT_EQ(GetScriptResult(env, R"(execute_trajectories == "true")").cast<int>(), 1);
+  GetScriptResult(env, R"(tool_object_name=""; execute_trajectories="false")");
+  EXPECT_EQ(GetScriptResult(env, R"(tool_object_name!="")").cast<int>(), 0);
+  EXPECT_EQ(GetScriptResult(env, R"(execute_trajectories == "true")").cast<int>(), 0);
+}
+
+TEST(ParserTest, DoubleQuotedXmlScriptAndPreconditions)
+{
+  BT::BehaviorTreeFactory factory;
+  const std::string xml_text = R"(
+  <root BTCPP_format="4">
+    <BehaviorTree ID="Main">
+      <Sequence>
+        <Script code="viz_marker_name:=&quot;place_pose_&quot;..viz_idx;
+                      mask_label:=&quot;mask &quot;..index;
+                      header := &quot;SAM3 prompt=&quot;..prompt"/>
+        <AlwaysSuccess _failureIf="tool_object_name!=&quot;&quot;"/>
+        <AlwaysFailure _successIf="execute_trajectories == &quot;true&quot;"/>
+      </Sequence>
+    </BehaviorTree>
+  </root>)";
+  auto blackboard = BT::Blackboard::create();
+  blackboard->set("viz_idx", 3);
+  blackboard->set("index", 2);
+  blackboard->set("prompt", std::string("bottles"));
+  blackboard->set("tool_object_name", std::string(""));
+  blackboard->set("execute_trajectories", std::string("true"));
+  auto tree = factory.createTreeFromText(xml_text, blackboard);
+
+  EXPECT_EQ(tree.tickWhileRunning(), BT::NodeStatus::SUCCESS);
+  EXPECT_EQ(blackboard->get<std::string>("viz_marker_name"), "place_pose_3");
+  EXPECT_EQ(blackboard->get<std::string>("mask_label"), "mask 2");
+  EXPECT_EQ(blackboard->get<std::string>("header"), "SAM3 prompt=bottles");
+
+  blackboard->set("execute_trajectories", std::string("false"));
+  EXPECT_EQ(tree.tickWhileRunning(), BT::NodeStatus::FAILURE);
+  blackboard->set("execute_trajectories", std::string("true"));
+  blackboard->set("tool_object_name", std::string("tool"));
+  EXPECT_EQ(tree.tickWhileRunning(), BT::NodeStatus::FAILURE);
+}
+
 TEST(ParserTest, AnyTypes_Failing)
 {
   EXPECT_FALSE(BT::ValidateScript("0X100g"));
