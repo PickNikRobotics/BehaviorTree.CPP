@@ -15,6 +15,7 @@
 #include "behaviortree_cpp/scripting/any_types.hpp"
 #include "behaviortree_cpp/scripting/script_parser.hpp"
 
+#include <charconv>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -48,6 +49,29 @@ inline double StringToDouble(const Any& value, const Environment& env)
     }
   }
   return value.cast<double>();
+}
+
+// Replace a string holding a whole number (e.g. "42" or "1.5") with that number.
+// Unlike StringToDouble, it rejects numeric prefixes, booleans and enums.
+inline void NumericStringToNumber(Any& value)
+{
+  const auto str = value.cast<std::string>();
+  const char* end = str.data() + str.size();
+  int64_t int_val = 0;
+  const auto [ptr, ec] = std::from_chars(str.data(), end, int_val);
+  double dbl_val = 0;
+  if(ec == std::errc() && ptr == end)
+  {
+    value = Any(int_val);
+    return;
+  }
+  // Upstream calls parseDouble(str, dbl_val, true), added in its #1167 for Apple libc++; this
+  // fork doesn't have it yet, and from_chars with a full-consumption check is the same here.
+  const auto [dbl_ptr, dbl_ec] = std::from_chars(str.data(), end, dbl_val);
+  if(dbl_ec == std::errc() && dbl_ptr == end)
+  {
+    value = Any(dbl_val);
+  }
 }
 
 struct ExprBase
@@ -233,11 +257,21 @@ struct ExprBinaryArithmetic : ExprBase
       throw RuntimeError(ErrorNotInit("right", opStr()));
     }
 
-    // If just one value is strongly typed as a number, and the other can be casted to one, do arithmetic. If both are not strongly typed, continue. In the case of `+`, non-strongly typed values will result in concatenation.
-    bool are_numbers = (rhs_v.isNumber() && lhs_v.isNumber()) ||
-                       ((rhs_v.tryCast<double>().has_value() && lhs_v.isNumber()) !=
-                        (rhs_v.isNumber() && lhs_v.tryCast<double>().has_value()));
-    if(are_numbers)
+    // A numeric string mixed with a number is used as that number, e.g. the
+    // literal SubTree port int_val="42" in "int_val + 1"
+    if(op == plus || op == minus || op == times || op == div)
+    {
+      if(lhs_v.isString() && rhs_v.isNumber())
+      {
+        NumericStringToNumber(lhs_v);
+      }
+      else if(lhs_v.isNumber() && rhs_v.isString())
+      {
+        NumericStringToNumber(rhs_v);
+      }
+    }
+
+    if(rhs_v.isNumber() && lhs_v.isNumber())
     {
       auto lv = lhs_v.cast<double>();
       auto rv = rhs_v.cast<double>();
