@@ -15,9 +15,12 @@
 #include "behaviortree_cpp/scripting/any_types.hpp"
 #include "behaviortree_cpp/scripting/script_parser.hpp"
 
+#include <cctype>
 #include <charconv>
 #include <cmath>
+#include <locale>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -65,10 +68,20 @@ inline void NumericStringToNumber(Any& value)
     value = Any(int_val);
     return;
   }
-  // Upstream calls parseDouble(str, dbl_val, true), added in its #1167 for Apple libc++; this
-  // fork doesn't have it yet, and from_chars with a full-consumption check is the same here.
+  // Upstream calls parseDouble(str, dbl_val, true), which its #1167 added and this fork doesn't
+  // have yet: from_chars with a full-consumption check, or a classic-locale stream without it.
+#if __cpp_lib_to_chars >= 201611L
   const auto [dbl_ptr, dbl_ec] = std::from_chars(str.data(), end, dbl_val);
-  if(dbl_ec == std::errc() && dbl_ptr == end)
+  const bool parsed = dbl_ec == std::errc() && dbl_ptr == end;
+#else
+  std::istringstream stream(str);
+  stream.imbue(std::locale::classic());
+  stream >> dbl_val;
+  const bool parsed = !str.empty() &&
+                      !std::isspace(static_cast<unsigned char>(str.front())) &&
+                      !stream.fail() && stream.peek() == std::char_traits<char>::eof();
+#endif
+  if(parsed)
   {
     value = Any(dbl_val);
   }
