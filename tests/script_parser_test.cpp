@@ -754,3 +754,185 @@ TEST(ParserTest, MultipleStatements)
   auto result = Parse("a:=10; b:=20; a+b");
   EXPECT_EQ(result.value().cast<double>(), 30.0);
 }
+
+// https://github.com/PickNikRobotics/moveit_pro/issues/24179
+// Numbers that arrive as strings (for example through SubTree ports) take part in arithmetic
+// only when the whole string is a number, and `..` joins any two strings or numbers.
+TEST(ParserTest, UntypedNumericOperands)
+{
+  BT::Ast::Environment env = { BT::Blackboard::create(), {} };
+  auto Get = [&env](const char* text) { return GetScriptResult(env, text); };
+  auto Error = [&env](const char* text) {
+    auto result = BT::ParseScriptAndExecute(env, text);
+    return result.has_value() ? std::string() : result.error();
+  };
+
+  // Arithmetic on numeric strings, other than `+`.
+  EXPECT_EQ(Get("a := '1'; b := '2'; a - b").cast<double>(), -1.0);
+  EXPECT_EQ(Get("a := '1'; b := '2'; a * b").cast<double>(), 2.0);
+  EXPECT_EQ(Get("a := '1'; b := '2'; a / b").cast<double>(), 0.5);
+  EXPECT_EQ(Get("'-2' * '1.5'").cast<double>(), -3.0);
+  EXPECT_EQ(Get("'1e3' - 1").cast<double>(), 999.0);
+  EXPECT_EQ(Get("'12' + 3").cast<double>(), 15.0);
+  EXPECT_EQ(Get("n1 := 1; n2 := 2; n1 + n2").cast<double>(), 3.0);
+
+  // `+` on two strings still concatenates until it is removed in 11.0.0.
+  EXPECT_EQ(Get("a := '1'; b := '2'; a + b").cast<std::string>(), "12");
+  EXPECT_EQ(Get("'a' + 'b'").cast<std::string>(), "ab");
+
+  // Spaces around a number don't matter, and the usual decimal spellings are numbers.
+  EXPECT_EQ(Get("' 5' * 2").cast<double>(), 10.0);
+  EXPECT_EQ(Get("'5 ' * 2").cast<double>(), 10.0);
+  EXPECT_EQ(Get("'\t7\n' * 1").cast<double>(), 7.0);
+  EXPECT_EQ(Get("'.5' * 2").cast<double>(), 1.0);
+  EXPECT_EQ(Get("'5.' * 2").cast<double>(), 10.0);
+  EXPECT_EQ(Get("'1e+5' - 0").cast<double>(), 100000.0);
+
+  // A string that is only partly a number is not a number.
+  for(const char* script :
+      { "'3 apples' + 4", "'5000ms' / 1000", "'' - 1", "' ' - 1", "'0x10' - 1",
+        "'+5' - 1", "'1e' - 1", "'1.2.3' - 1", "'within ' + 5000", "'nan' + 1",
+        "'inf' - 1", "'1e999' - 1", "'1e-400' - 0", "-'abc'" })
+  {
+    const auto error = Error(script);
+    EXPECT_NE(error.find("not a number"), std::string::npos) << script << ": " << error;
+  }
+  EXPECT_NE(Error("'within ' + 5000").find("[..]"), std::string::npos);
+  EXPECT_NE(Error("'3 apples' + 4").find("['3 apples']"), std::string::npos);
+  EXPECT_NE(Error("5 - 'x'").find("['x'] of operator [-]"), std::string::npos);
+  EXPECT_NE(Error("-'abc'").find("of a unary operator"), std::string::npos);
+  env.vars->set("list", std::vector<int>{ 1 });
+  EXPECT_NE(Error("'a' .. list").find("neither a string nor a number"),
+            std::string::npos);
+
+  // Bitwise operators read an integer string exactly, beyond the 2^53 a double holds.
+  EXPECT_EQ(Get("'6' & '3'").cast<int>(), 2);
+  EXPECT_EQ(Get("'9007199254740993' & 1").cast<int>(), 1);
+  env.vars->set("big", int64_t(9007199254740993));
+  EXPECT_EQ(Get("big & 1").cast<int>(), 1);
+  // A double can't hold it exactly, so other operators report an error instead of throwing.
+  for(const char* script : { "big + 1", "-big", "!big", "big == 1", "big < 5",
+                             "q := 1; q += big", "big ? 1 : 2" })
+  {
+    EXPECT_FALSE(BT::ParseScriptAndExecute(env, script).has_value()) << script;
+  }
+  EXPECT_EQ(Get("~big").cast<int64_t>(), -9007199254740994);
+  EXPECT_EQ(Get("~'9007199254740993'").cast<int64_t>(), -9007199254740994);
+  // Up to 2^53 integer text is exact.
+  EXPECT_EQ(Get("'9007199254740992' - 0").cast<int64_t>(), 9007199254740992);
+  EXPECT_EQ(Get("'-9007199254740992' + 0").cast<int64_t>(), -9007199254740992);
+  EXPECT_EQ(Get("'007' + 1").cast<double>(), 8.0);
+  EXPECT_EQ(Get("'0.0e-400' - 0").cast<double>(), 0.0);
+  // Integer text a double would round is an error in arithmetic, as for an int64 entry.
+  for(const char* script :
+      { "'9007199254740993' + 0", "-'9007199254740993'", "' 9007199254740993 ' * 1",
+        "'9223372036854775808' & 1", "'1e20' & 1", "'99999999999999999999' - 1",
+        "'-1e-400' - 0" })
+  {
+    EXPECT_FALSE(BT::ParseScriptAndExecute(env, script).has_value()) << script;
+  }
+
+  // Unary operators.
+  EXPECT_EQ(Get("-'5'").cast<double>(), -5.0);
+  EXPECT_EQ(Get("!'0'").cast<int>(), 1);
+  EXPECT_EQ(Get("~'6'").cast<int>(), -7);
+
+  // `..` joins numbers too, without trailing zeros.
+  EXPECT_EQ(Get("n1 .. n2").cast<std::string>(), "12");
+  EXPECT_EQ(Get("sum := 1 + 1; sum .. ''").cast<std::string>(), "2");
+  EXPECT_EQ(Get("0.5 .. ''").cast<std::string>(), "0.5");
+  EXPECT_EQ(Get("-0.5 .. ''").cast<std::string>(), "-0.5");
+  EXPECT_EQ(Get("1e15 .. ''").cast<std::string>(), "1000000000000000");
+  EXPECT_EQ(Get("9007199254740992.0 .. ''").cast<std::string>(), "9007199254740992");
+  EXPECT_EQ(Get("(0.1 + 0.2) .. ''").cast<std::string>(), "0.30000000000000004");
+  EXPECT_EQ(Get("1e300 .. ''").cast<std::string>(), "1e+300");
+  EXPECT_EQ(Get("0.0001 .. ''").cast<std::string>(), "0.0001");
+  EXPECT_EQ(Get("-0.0 .. ''").cast<std::string>(), "0");
+  EXPECT_EQ(Get("'x' .. -3").cast<std::string>(), "x-3");
+  EXPECT_EQ(Get("'within ' .. 5000 .. ' ms'").cast<std::string>(), "within 5000 ms");
+  env.vars->set("half", 0.5f);
+  EXPECT_EQ(Get("'x' .. half").cast<std::string>(), "x0.5");
+
+  // Compound assignment on an entry holding a numeric string keeps it a string.
+  EXPECT_EQ(Get("c := '1'; c += 1; c").cast<std::string>(), "2");
+  EXPECT_TRUE(env.vars->getEntry("c")->value.isString());
+  EXPECT_EQ(Get("d := '10'; d -= 4; d").cast<std::string>(), "6");
+  EXPECT_NE(Error("e := 'apples'; e += 1").find("not a number"), std::string::npos);
+  EXPECT_EQ(Get("f := 'ab'; f += 'cd'; f").cast<std::string>(), "abcd");
+
+  // A numeric string on the right of a compound assignment to a number entry is a number.
+  EXPECT_EQ(Get("n := 1; n += '2'; n").cast<double>(), 3.0);
+  EXPECT_EQ(Get("n -= '1'; n").cast<double>(), 2.0);
+  const auto compound_error = Error("n += 'x'");
+  EXPECT_NE(compound_error.find("['x'] of operator [+=]"), std::string::npos)
+      << compound_error;
+  EXPECT_NE(compound_error.find("[..]"), std::string::npos) << compound_error;
+  EXPECT_EQ(Get("g := '10'; g -= '4'; g").cast<std::string>(), "6");
+
+  // The same whether the entry was set from C++ untyped or declared as a string.
+  env.vars->set("untyped", std::string("1"));
+  EXPECT_EQ(Get("untyped += 1; untyped").cast<std::string>(), "2");
+  env.vars->createEntry("typed", BT::TypeInfo::Create<std::string>());
+  env.vars->set("typed", std::string("1"));
+  EXPECT_EQ(Get("typed += 1; typed").cast<std::string>(), "2");
+
+  // Assigning a string to a number entry created by a script uses the same rule. (Entries typed
+  // from C++ convert with their port converter instead.)
+  EXPECT_EQ(Get("num := 1; num = '7'; num").cast<double>(), 7.0);
+  const auto assign_error = Error("num = '3 apples'");
+  EXPECT_NE(assign_error.find("entry [num]"), std::string::npos) << assign_error;
+  EXPECT_NE(assign_error.find("not a number"), std::string::npos) << assign_error;
+
+  // Comparisons use the same rule, and two numeric strings compare as numbers.
+  EXPECT_EQ(Get("'3' == 3").cast<int>(), 1);
+  EXPECT_EQ(Get("'10' > '9'").cast<int>(), 1);
+  EXPECT_EQ(Get("'3' == '3.0'").cast<int>(), 1);
+  EXPECT_EQ(Get("'abc' < 'abd'").cast<int>(), 1);
+  EXPECT_EQ(Get("'10' < 'abc'").cast<int>(), 1);
+  EXPECT_EQ(Get("'007' == '7'").cast<int>(), 1);
+  // Exactly, so different numbers never compare equal.
+  EXPECT_EQ(Get("'1730000000000000001' == '1730000000000000002'").cast<int>(), 0);
+  EXPECT_EQ(Get("'1730000000000000001' < '1730000000000000002'").cast<int>(), 1);
+  EXPECT_EQ(Get("'0.00000001' == '0'").cast<int>(), 0);
+  // Numbers beyond what int64 or a double hold exactly can't be compared.
+  for(const char* script : { "'99999999999999999998' == '99999999999999999999'", "'200000"
+                                                                                 "0000000"
+                                                                                 "000000'"
+                                                                                 " < "
+                                                                                 "'3."
+                                                                                 "5'" })
+  {
+    EXPECT_FALSE(BT::ParseScriptAndExecute(env, script).has_value()) << script;
+  }
+
+  // The condition of ?: uses the same rule.
+  EXPECT_EQ(Get("'1' ? 10 : 20").cast<int>(), 10);
+  EXPECT_EQ(Get("' 0' ? 10 : 20").cast<int>(), 20);
+  for(const char* script : { "'3 apples' ? 10 : 20", "'0x10' ? 10 : 20", "'' ? 10 : 20",
+                             "'true' ? 10 : 20", "'9007199254740993' ? 10 : 20" })
+  {
+    EXPECT_FALSE(BT::ParseScriptAndExecute(env, script).has_value()) << script;
+  }
+  EXPECT_EQ(Get("'2.5' < 3").cast<int>(), 1);
+  for(const char* script : { "'3 apples' == 3", "'+5' == 5", "'nan' < 1" })
+  {
+    EXPECT_FALSE(BT::ParseScriptAndExecute(env, script).has_value()) << script;
+  }
+}
+
+// The stream fallbacks used where the standard library has no floating-point from_chars or
+// to_chars.
+TEST(ParserTest, NumberStreamFallbacks)
+{
+  using BT::Ast::detail::StreamFormatNumber;
+  using BT::Ast::detail::StreamParseNumber;
+
+  EXPECT_EQ(StreamParseNumber("1.5"), 1.5);
+  EXPECT_EQ(StreamParseNumber("-2e3"), -2000.0);
+  EXPECT_FALSE(StreamParseNumber("12abc").has_value());
+  EXPECT_FALSE(StreamParseNumber("1e999").has_value());
+
+  EXPECT_EQ(StreamFormatNumber(0.1), "0.1");
+  EXPECT_EQ(StreamFormatNumber(0.1 + 0.2), "0.30000000000000004");
+  EXPECT_EQ(StreamParseNumber(StreamFormatNumber(1e300)), 1e300);
+}

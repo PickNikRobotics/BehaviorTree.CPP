@@ -406,6 +406,41 @@ TEST(SubTree, ScriptingTypingIssue_StringConcatWorks)
   EXPECT_EQ(blackboard->get<std::string>("y"), "1234");
 }
 
+// https://github.com/PickNikRobotics/moveit_pro/issues/24179
+TEST(SubTree, ScriptingTypingIssue_SubtractNumericStringPort)
+{
+  static const char* xml_text = R"(
+
+<root BTCPP_format="4" >
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <SubTree ID="mySubtree" in_value="5" out_value="{y}" />
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="mySubtree">
+      <Script code = "out_value := in_value - '1'" />
+    </BehaviorTree>
+  <TreeNodesModel>
+    <SubTree ID="mySubtree">
+      <input_port name="in_value" />
+      <output_port name="out_value" />
+    </SubTree>
+  </TreeNodesModel>
+</root> )";
+
+  BehaviorTreeFactory factory;
+  factory.registerBehaviorTreeFromText(xml_text);
+
+  auto blackboard = BT::Blackboard::create();
+  Tree tree = factory.createTree("MainTree", blackboard);
+
+  auto status = tree.tickWhileRunning();
+  ASSERT_EQ(status, NodeStatus::SUCCESS);
+
+  EXPECT_EQ(blackboard->get<int>("y"), 4);
+}
+
 class NaughtyNav2Node : public BT::SyncActionNode
 {
 public:
