@@ -1089,3 +1089,175 @@ TEST(SubTree, NoNameAttribute_AutoGeneratesUniquePaths)
   auto status = tree.tickWhileRunning();
   ASSERT_EQ(status, NodeStatus::SUCCESS);
 }
+
+// Regression test: logical NOT should accept literal boolean values passed to
+// subtrees without changing their string representation in the blackboard.
+TEST(SubTree, LiteralBooleanPortsSupportLogicalNot)
+{
+  // clang-format off
+  static const char* xml_text = R"(
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+    <BehaviorTree ID="MainTree">
+        <SubTree ID="CheckBooleans" enabled="true" disabled="false"
+                 enabled_upper="TRUE" disabled_title="False"
+                 enabled_numeric="{enabled_numeric}"
+                 disabled_numeric="{disabled_numeric}" />
+    </BehaviorTree>
+
+    <BehaviorTree ID="CheckBooleans">
+        <Sequence>
+            <AlwaysSuccess _skipIf="!enabled" />
+            <ScriptCondition code="!disabled" />
+            <ScriptCondition code="!!enabled_upper" />
+            <ScriptCondition code="!disabled_title" />
+            <ScriptCondition code="!!enabled_numeric" />
+            <ScriptCondition code="!disabled_numeric" />
+        </Sequence>
+    </BehaviorTree>
+
+    <TreeNodesModel>
+        <SubTree ID="CheckBooleans">
+            <input_port name="enabled" type="bool" />
+            <input_port name="disabled" type="bool" />
+            <input_port name="enabled_upper" type="bool" />
+            <input_port name="disabled_title" type="bool" />
+            <input_port name="enabled_numeric" type="bool" />
+            <input_port name="disabled_numeric" type="bool" />
+        </SubTree>
+    </TreeNodesModel>
+
+</root>
+)";
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+  auto tree = factory.createTreeFromText(xml_text);
+  tree.rootBlackboard()->set("enabled_numeric", std::string("1"));
+  tree.rootBlackboard()->set("disabled_numeric", std::string("0"));
+
+  ASSERT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+  ASSERT_EQ(tree.subtrees[1]->blackboard->get<std::string>("enabled"), "true");
+  ASSERT_EQ(tree.subtrees[1]->blackboard->get<std::string>("disabled"), "false");
+  ASSERT_EQ(tree.subtrees[1]->blackboard->get<std::string>("enabled_upper"), "TRUE");
+  ASSERT_EQ(tree.subtrees[1]->blackboard->get<std::string>("disabled_title"), "False");
+}
+
+TEST(SubTree, LiteralNonBooleanPortsRejectLogicalNot)
+{
+  // clang-format off
+  static const char* xml_text = R"(
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+    <BehaviorTree ID="MainTree">
+        <SubTree ID="CheckValue" value="1not_bool" />
+    </BehaviorTree>
+
+    <BehaviorTree ID="CheckValue">
+        <ScriptCondition code="!value" />
+    </BehaviorTree>
+
+</root>
+)";
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+  auto tree = factory.createTreeFromText(xml_text);
+
+  ASSERT_THROW((void)tree.tickWhileRunning(), RuntimeError);
+  ASSERT_EQ(tree.subtrees[1]->blackboard->get<std::string>("value"), "1not_bool");
+}
+
+// Regression test (#1121): Script expressions can do arithmetic with literal
+// numeric values passed to subtrees.
+TEST(SubTree, LiteralNumericPortsPreserveType)
+{
+  // clang-format off
+  static const char* xml_text = R"(
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+    <BehaviorTree ID="MainTree">
+        <Sequence>
+            <SubTree ID="DoMath" int_val="42" dbl_val="3.14" str_val="hello"
+                     remapped_val="{from_parent}" />
+        </Sequence>
+    </BehaviorTree>
+
+    <BehaviorTree ID="DoMath">
+        <Sequence>
+            <ScriptCondition code=" int_val + 1 == 43 " />
+            <ScriptCondition code=" dbl_val > 3.0 " />
+            <ScriptCondition code=" remapped_val + 1 == 101 " />
+        </Sequence>
+    </BehaviorTree>
+
+</root>
+)";
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+
+  auto tree = factory.createTreeFromText(xml_text);
+
+  // Set the remapped parent value as an integer
+  tree.rootBlackboard()->set("from_parent", 100);
+
+  const auto status = tree.tickWhileRunning();
+  ASSERT_EQ(status, NodeStatus::SUCCESS);
+}
+
+// Issue #1246: a literal passed to a SubTree stays a string, so ports of different
+// types can read it, and its spelling is preserved.
+TEST(SubTree, LiteralPortsAreReadByAnyPortType)
+{
+  // clang-format off
+  static const char* xml_text = R"(
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+
+    <BehaviorTree ID="MainTree">
+        <SubTree ID="Sub" mode="1" code="007" />
+    </BehaviorTree>
+
+    <BehaviorTree ID="Sub">
+        <Sequence>
+            <ReadString value="{mode}" />
+            <ReadInt value="{mode}" />
+            <ReadDouble value="{mode}" />
+            <ReadString value="{code}" />
+        </Sequence>
+    </BehaviorTree>
+
+</root>
+)";
+  // clang-format on
+
+  BehaviorTreeFactory factory;
+  std::vector<std::string> strings;
+  int int_val = 0;
+  double dbl_val = 0;
+  factory.registerSimpleAction("ReadString",
+                               [&](TreeNode& node) {
+                                 strings.push_back(
+                                     node.getInput<std::string>("value").value());
+                                 return NodeStatus::SUCCESS;
+                               },
+                               { InputPort<std::string>("value") });
+  factory.registerSimpleAction("ReadInt",
+                               [&](TreeNode& node) {
+                                 int_val = node.getInput<int>("value").value();
+                                 return NodeStatus::SUCCESS;
+                               },
+                               { InputPort<int>("value") });
+  factory.registerSimpleAction("ReadDouble",
+                               [&](TreeNode& node) {
+                                 dbl_val = node.getInput<double>("value").value();
+                                 return NodeStatus::SUCCESS;
+                               },
+                               { InputPort<double>("value") });
+
+  auto tree = factory.createTreeFromText(xml_text);
+  ASSERT_EQ(tree.tickWhileRunning(), NodeStatus::SUCCESS);
+  ASSERT_EQ(strings, (std::vector<std::string>{ "1", "007" }));
+  ASSERT_EQ(int_val, 1);
+  ASSERT_EQ(dbl_val, 1.0);
+}
