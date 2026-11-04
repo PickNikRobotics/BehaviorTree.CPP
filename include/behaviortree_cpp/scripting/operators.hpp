@@ -15,12 +15,8 @@
 #include "behaviortree_cpp/scripting/any_types.hpp"
 #include "behaviortree_cpp/scripting/script_parser.hpp"
 
-#include <cctype>
-#include <charconv>
 #include <cmath>
-#include <locale>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -52,39 +48,6 @@ inline double StringToDouble(const Any& value, const Environment& env)
     }
   }
   return value.cast<double>();
-}
-
-// Replace a string holding a whole number (e.g. "42" or "1.5") with that number.
-// Unlike StringToDouble, it rejects numeric prefixes, booleans and enums.
-inline void NumericStringToNumber(Any& value)
-{
-  const auto str = value.cast<std::string>();
-  const char* end = str.data() + str.size();
-  int64_t int_val = 0;
-  const auto [ptr, ec] = std::from_chars(str.data(), end, int_val);
-  double dbl_val = 0;
-  if(ec == std::errc() && ptr == end)
-  {
-    value = Any(int_val);
-    return;
-  }
-  // Upstream calls parseDouble(str, dbl_val, true), which its #1167 added and this fork doesn't
-  // have yet: from_chars with a full-consumption check, or a classic-locale stream without it.
-#if __cpp_lib_to_chars >= 201611L
-  const auto [dbl_ptr, dbl_ec] = std::from_chars(str.data(), end, dbl_val);
-  const bool parsed = dbl_ec == std::errc() && dbl_ptr == end;
-#else
-  std::istringstream stream(str);
-  stream.imbue(std::locale::classic());
-  stream >> dbl_val;
-  const bool parsed = !str.empty() &&
-                      !std::isspace(static_cast<unsigned char>(str.front())) &&
-                      !stream.fail() && stream.peek() == std::char_traits<char>::eof();
-#endif
-  if(parsed)
-  {
-    value = Any(dbl_val);
-  }
 }
 
 struct ExprBase
@@ -166,38 +129,18 @@ struct ExprUnaryArithmetic : ExprBase
         case negate:
           return Any(-rv);
         case complement:
-          // Use the checked conversion, like the binary bitwise operators do.
-          // A plain static_cast is undefined for NaN and for values at or
-          // beyond the int64_t range: the hand-written comparison used here
-          // before let NaN (every comparison is false) and 2^63 (not greater
-          // than double(INT64_MAX), which rounds up to 2^63) through, and
-          // silently truncated fractional values.
-          try
-          {
-            return Any(static_cast<double>(~rhs_v.cast<int64_t>()));
-          }
-          catch(const std::exception&)
+          if(rv > static_cast<double>(std::numeric_limits<int64_t>::max()) ||
+             rv < static_cast<double>(std::numeric_limits<int64_t>::min()))
           {
             throw RuntimeError("Number out of range for bitwise operation");
           }
+          return Any(static_cast<double>(~static_cast<int64_t>(rv)));
         case logical_not:
           return Any(static_cast<double>(!static_cast<bool>(rv)));
       }
     }
     else if(rhs_v.isString())
     {
-      if(op == logical_not)
-      {
-        const auto str = rhs_v.cast<std::string>();
-        if(str == "true" || str == "True" || str == "TRUE" || str == "1")
-        {
-          return Any(0.0);
-        }
-        if(str == "false" || str == "False" || str == "FALSE" || str == "0")
-        {
-          return Any(1.0);
-        }
-      }
       throw RuntimeError("Invalid operator for std::string");
     }
     throw RuntimeError("ExprUnaryArithmetic: undefined");
@@ -270,21 +213,11 @@ struct ExprBinaryArithmetic : ExprBase
       throw RuntimeError(ErrorNotInit("right", opStr()));
     }
 
-    // A numeric string mixed with a number is used as that number, e.g. the
-    // literal SubTree port int_val="42" in "int_val + 1"
-    if(op == plus || op == minus || op == times || op == div)
-    {
-      if(lhs_v.isString() && rhs_v.isNumber())
-      {
-        NumericStringToNumber(lhs_v);
-      }
-      else if(lhs_v.isNumber() && rhs_v.isString())
-      {
-        NumericStringToNumber(rhs_v);
-      }
-    }
-
-    if(rhs_v.isNumber() && lhs_v.isNumber())
+    // If just one value is strongly typed as a number, and the other can be casted to one, do arithmetic. If both are not strongly typed, continue. In the case of `+`, non-strongly typed values will result in concatenation.
+    bool are_numbers = (rhs_v.isNumber() && lhs_v.isNumber()) ||
+                       ((rhs_v.tryCast<double>().has_value() && lhs_v.isNumber()) !=
+                        (rhs_v.isNumber() && lhs_v.tryCast<double>().has_value()));
+    if(are_numbers)
     {
       auto lv = lhs_v.cast<double>();
       auto rv = rhs_v.cast<double>();
