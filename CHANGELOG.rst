@@ -4,7 +4,7 @@ Changelog for package behaviortree_cpp
 
 Forthcoming
 -----------
-* Add Finally control node: runs a cleanup child after the main child finishes, fails, or throws (then rethrows), and runs it synchronously when halted. Registers the built-in ID ``Finally``
+* Add Finally control node: runs a cleanup child after the main child succeeds, fails, or throws (then rethrows). A main child that is skipped before it starts skips cleanup too. When halted from the thread that ticks the tree, keeps ticking cleanup until it finishes or ``halt_timeout_msec`` (default 10000) runs out; a halt from another thread, or ``halt_timeout_msec`` of 0, gives cleanup one tick. Registers the built-in ID ``Finally``
 
 4.9.0 (2026-02-11)
 ------------------

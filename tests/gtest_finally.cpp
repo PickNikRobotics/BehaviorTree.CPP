@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <stdexcept>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -250,7 +251,19 @@ TEST_F(FinallyTest, WrongChildCount_RejectedAtLoad)
                BT::RuntimeError);
 }
 
-TEST_F(FinallyTest, MainSkipped_CleanupRunsAndReturnsSkipped)
+TEST_F(FinallyTest, HaltByDefault_AsyncCleanupFinishes)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_ticks, 2);
+}
+
+TEST_F(FinallyTest, MainSkipped_CleanupDoesNotRun)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
@@ -258,10 +271,10 @@ TEST_F(FinallyTest, MainSkipped_CleanupRunsAndReturnsSkipped)
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::SKIPPED);
-  EXPECT_EQ(cleanup_count, 1);
-  // The node must not be left RUNNING, or this halt would run cleanup again.
+  EXPECT_EQ(cleanup_count, 0);
+  // The node must not be left RUNNING, or this halt would run cleanup.
   tree.haltTree();
-  EXPECT_EQ(cleanup_count, 1);
+  EXPECT_EQ(cleanup_count, 0);
 }
 
 TEST_F(FinallyTest, AsyncCleanup_ReturnsMainStatusWhenCleanupCompletes)
@@ -294,7 +307,7 @@ TEST_F(FinallyTest, HaltWhileCleanupRunning_CleanupFinishes)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
-      <Finally><AlwaysSuccess/><AsyncCleanup/></Finally>
+      <Finally halt_timeout_msec="1000"><AlwaysSuccess/><AsyncCleanup/></Finally>
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
@@ -307,7 +320,7 @@ TEST_F(FinallyTest, HaltWhileMainRunning_AsyncCleanupFinishes)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
-      <Finally><AlwaysRunning/><AsyncCleanup/></Finally>
+      <Finally halt_timeout_msec="1000"><AlwaysRunning/><AsyncCleanup/></Finally>
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
@@ -320,7 +333,7 @@ TEST_F(FinallyTest, HaltWhileMainRunning_EveryStepOfAsyncCleanupRuns)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
-      <Finally>
+      <Finally halt_timeout_msec="1000">
         <AlwaysRunning/>
         <Sequence><AsyncCleanup/><Cleanup/></Sequence>
       </Finally>
@@ -550,7 +563,7 @@ TEST_F(FinallyTest, CleanupThrowsAfterRunningDuringHalt_DoesNotPropagate)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
-      <Finally><AlwaysRunning/><RunThenThrow/></Finally>
+      <Finally halt_timeout_msec="1000"><AlwaysRunning/><RunThenThrow/></Finally>
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
@@ -563,7 +576,7 @@ TEST_F(FinallyTest, CleanupFailsAfterRunningDuringHalt_IsReported)
 {
   auto tree = factory.createTreeFromText(R"(
     <root BTCPP_format="4"><BehaviorTree>
-      <Finally><AlwaysRunning/><RunThenFail/></Finally>
+      <Finally halt_timeout_msec="1000"><AlwaysRunning/><RunThenFail/></Finally>
     </BehaviorTree></root>)");
 
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
@@ -604,4 +617,125 @@ TEST_F(FinallyTest, CleanupThrows_StatefulMainRestartsOnNextTick)
   EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
   EXPECT_EQ(two_tick_starts, 2);
   EXPECT_EQ(tree.tickOnce(), NodeStatus::SUCCESS);
+}
+
+TEST_F(FinallyTest, HaltWithZeroTimeout_CleanupGetsOneTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="0"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_ticks, 1);
+  EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
+}
+
+TEST_F(FinallyTest, HaltFromAnotherThread_CleanupGetsOneTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="1000"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  testing::internal::CaptureStderr();
+  std::thread([&tree] { tree.haltTree(); }).join();
+  EXPECT_NE(testing::internal::GetCapturedStderr().find("does not tick this node"),
+            std::string::npos);
+  EXPECT_EQ(cleanup_ticks, 1);
+  EXPECT_EQ(tree.rootNode()->status(), NodeStatus::IDLE);
+}
+
+TEST_F(FinallyTest, HaltedByTimeout_CleanupDoesNotLoopOnTimerThread)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Timeout msec="50">
+        <Finally halt_timeout_msec="1000"><AlwaysRunning/><AsyncCleanup/></Finally>
+      </Timeout>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::FAILURE);
+  EXPECT_EQ(cleanup_ticks, 1);
+}
+
+TEST_F(FinallyTest, MainSkippedAfterRunning_CleanupRuns)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><AlwaysRunning _while="go"/><Cleanup/></Finally>
+    </BehaviorTree></root>)");
+  tree.rootBlackboard()->set("go", true);
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.rootBlackboard()->set("go", false);
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::SKIPPED);
+  EXPECT_EQ(cleanup_count, 1);
+  // The node must not be left RUNNING, or this halt would run cleanup again.
+  tree.haltTree();
+  EXPECT_EQ(cleanup_count, 1);
+}
+
+TEST_F(FinallyTest, HaltOnThreadThatDidNotTick_CleanupGetsOneTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="1000"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  std::thread([&tree] { EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING); }).join();
+  tree.haltTree();
+  EXPECT_EQ(cleanup_ticks, 1);
+}
+
+TEST_F(FinallyTest, HaltTimeoutBelowTickPeriod_CleanupGetsOneTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="5"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  tree.haltTree();
+  EXPECT_EQ(cleanup_ticks, 1);
+}
+
+TEST_F(FinallyTest, HaltedByTimeout_NestedFinallyDoesNotLoopOnTimerThread)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Timeout msec="50">
+        <Finally>
+          <Spin/>
+          <Finally halt_timeout_msec="1000"><Spin/><Spin/></Finally>
+        </Finally>
+      </Timeout>
+    </BehaviorTree></root>)");
+
+  const auto start = std::chrono::steady_clock::now();
+  EXPECT_EQ(tree.tickWhileRunning(std::chrono::milliseconds(1)), NodeStatus::FAILURE);
+  EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::milliseconds(500));
+}
+
+TEST_F(FinallyTest, TickedAgainAfterFinishing_SkippedMainDoesNotRunCleanup)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally><RunTwice _skipIf="skip"/><Cleanup/></Finally>
+    </BehaviorTree></root>)");
+  tree.rootBlackboard()->set("skip", false);
+  // Tick the node directly, so it is not reset between runs, as a parent that re-ticks a
+  // finished child would do.
+  auto* node = tree.rootNode();
+
+  EXPECT_EQ(node->executeTick(), NodeStatus::RUNNING);
+  EXPECT_EQ(node->executeTick(), NodeStatus::RUNNING);
+  EXPECT_EQ(node->executeTick(), NodeStatus::SUCCESS);
+  EXPECT_EQ(cleanup_count, 1);
+  ASSERT_EQ(node->status(), NodeStatus::SUCCESS);
+  tree.rootBlackboard()->set("skip", true);
+  EXPECT_EQ(node->executeTick(), NodeStatus::SKIPPED);
+  EXPECT_EQ(cleanup_count, 1);
 }
