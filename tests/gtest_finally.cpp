@@ -702,6 +702,21 @@ TEST_F(FinallyTest, HaltTimeoutBelowTickPeriod_CleanupGetsOneTick)
   EXPECT_EQ(cleanup_ticks, 1);
 }
 
+TEST_F(FinallyTest, HaltTimeoutAtTickPeriod_CleanupGetsOneTick)
+{
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="10"><AlwaysRunning/><AsyncCleanup/></Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickOnce(), NodeStatus::RUNNING);
+  testing::internal::CaptureStderr();
+  tree.haltTree();
+  EXPECT_NE(testing::internal::GetCapturedStderr().find("did not finish within"),
+            std::string::npos);
+  EXPECT_EQ(cleanup_ticks, 1);
+}
+
 TEST_F(FinallyTest, HaltedByTimeout_NestedFinallyDoesNotLoopOnTimerThread)
 {
   auto tree = factory.createTreeFromText(R"(

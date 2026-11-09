@@ -108,6 +108,7 @@ void FinallyNode::finishCleanupDuringHalt(bool foreign_thread)
     NodeStatus cleanup_status = children_nodes_[1]->executeTick();
     // Cleanup gets one tick. Keep ticking only if halt_timeout_msec > 0 and this is the thread
     // that ticks the tree, so a halt from a timer or service thread does not block its caller.
+    // The deadline check in the loop stops a halt_timeout_msec of 10 or less after this tick.
     if(timeout_msec > 0 && foreign_thread && cleanup_status == NodeStatus::RUNNING)
     {
       std::cerr << "[" << name()
