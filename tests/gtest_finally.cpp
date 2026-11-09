@@ -717,6 +717,23 @@ TEST_F(FinallyTest, HaltTimeoutAtTickPeriod_CleanupGetsOneTick)
   EXPECT_EQ(cleanup_ticks, 1);
 }
 
+TEST_F(FinallyTest, TimeoutInsideMain_AsyncCleanupFinishes)
+{
+  // The pattern to use instead of a Timeout above Finally: the timer halts only main, and
+  // tick() then runs cleanup over several ticks. halt_timeout_msec="0" proves no halt of
+  // Finally is involved, since a halt would give cleanup a single tick.
+  auto tree = factory.createTreeFromText(R"(
+    <root BTCPP_format="4"><BehaviorTree>
+      <Finally halt_timeout_msec="0">
+        <Timeout msec="50"><AlwaysRunning/></Timeout>
+        <AsyncCleanup/>
+      </Finally>
+    </BehaviorTree></root>)");
+
+  EXPECT_EQ(tree.tickWhileRunning(), NodeStatus::FAILURE);
+  EXPECT_EQ(cleanup_ticks, 2);
+}
+
 TEST_F(FinallyTest, HaltedByTimeout_NestedFinallyDoesNotLoopOnTimerThread)
 {
   auto tree = factory.createTreeFromText(R"(
