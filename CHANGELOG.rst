@@ -4,7 +4,7 @@ Changelog for package behaviortree_cpp
 
 Forthcoming
 -----------
-* Add Finally control node: runs a cleanup child after the main child succeeds, fails, or throws (then rethrows). A main child that is skipped before it starts skips cleanup too. When halted from the thread that ticks the tree, keeps ticking cleanup until it finishes or ``halt_timeout_msec`` (default 10000) runs out; a halt from another thread, or a ``halt_timeout_msec`` of 10 or less, gives cleanup one tick. Registers the built-in ID ``Finally``
+* Add Finally control node: runs a cleanup child after the main child succeeds, fails, or throws (then rethrows). A main child that is skipped before it starts skips cleanup too. When halted, cleanup gets one tick by default. The default ``halt_timeout_msec`` is now 0 (was 10000 in earlier fork releases). With ``halt_timeout_msec`` above 10, a halt from the thread that ticks the tree keeps ticking cleanup until it finishes or the timeout runs out; a halt from another thread still gives one tick. A halt that arrives while another halt runs returns at once. Registers the built-in ID ``Finally``
 
 4.9.0 (2026-02-11)
 ------------------
