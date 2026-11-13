@@ -48,6 +48,7 @@ set(BT_TESTS
   gtest_tree.cpp
   gtest_try_catch.cpp
   gtest_finally.cpp
+  gtest_halt_child.cpp
   gtest_exception_tracking.cpp
   gtest_updates.cpp
   gtest_wakeup.cpp

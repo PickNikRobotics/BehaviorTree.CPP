@@ -445,6 +445,7 @@ protected:
   friend class BehaviorTreeFactory;
   friend class DecoratorNode;
   friend class ControlNode;
+  friend class FinallyNode;
   friend class Tree;
 
   [[nodiscard]] NodeConfig& config();
@@ -479,6 +480,9 @@ protected:
   T parseString(const std::string& str) const;
 
 private:
+  struct FinallyState;
+  [[nodiscard]] FinallyState& finallyState() noexcept;
+
   struct PImpl;
   std::unique_ptr<PImpl> _p;
 
