@@ -1,5 +1,6 @@
 #include "behaviortree_cpp/controls/finally_node.h"
 
+#include <atomic>
 #include <chrono>
 #include <exception>
 #include <iostream>
@@ -7,28 +8,77 @@
 #include <thread>
 #include <utility>
 
+#include "../finally_node_state.h"
+
 namespace BT
 {
 namespace
 {
 constexpr std::chrono::milliseconds kHaltTickPeriod{ 10 };
 
-void printException(std::string_view node_name, const char* context,
-                    const std::exception_ptr& exception)
+// True while this thread runs a halt() that came from a thread other than the one ticking the
+// node. A Finally ticked or halted inside it, e.g. as cleanup, must not run its blocking loop.
+thread_local bool tls_in_foreign_halt = false;
+
+class ForeignHaltScope
 {
-  std::cerr << "[" << node_name << "]: " << context << ": ";
+public:
+  explicit ForeignHaltScope(bool foreign)
+    : previous_(std::exchange(tls_in_foreign_halt, tls_in_foreign_halt || foreign))
+  {}
+  ~ForeignHaltScope()
+  {
+    tls_in_foreign_halt = previous_;
+  }
+  ForeignHaltScope(const ForeignHaltScope&) = delete;
+  ForeignHaltScope& operator=(const ForeignHaltScope&) = delete;
+  ForeignHaltScope(ForeignHaltScope&&) = delete;
+  ForeignHaltScope& operator=(ForeignHaltScope&&) = delete;
+
+private:
+  bool previous_;
+};
+
+// Clears the flag on every exit from halt().
+class ClearOnExit
+{
+public:
+  explicit ClearOnExit(std::atomic<bool>* flag) : flag_(flag)
+  {}
+  ~ClearOnExit()
+  {
+    flag_->store(false);
+  }
+  ClearOnExit(const ClearOnExit&) = delete;
+  ClearOnExit& operator=(const ClearOnExit&) = delete;
+  ClearOnExit(ClearOnExit&&) = delete;
+  ClearOnExit& operator=(ClearOnExit&&) = delete;
+
+private:
+  std::atomic<bool>* flag_;
+};
+
+void printException(std::string_view node_name, const char* context,
+                    const std::exception_ptr& exception) noexcept
+{
   try
   {
-    std::rethrow_exception(exception);
+    std::cerr << "[" << node_name << "]: " << context << ": ";
+    try
+    {
+      std::rethrow_exception(exception);
+    }
+    catch(const std::exception& ex)
+    {
+      std::cerr << ex.what() << std::endl;
+    }
+    catch(...)
+    {
+      std::cerr << "non-std exception" << std::endl;
+    }
   }
-  catch(const std::exception& ex)
-  {
-    std::cerr << ex.what() << std::endl;
-  }
-  catch(...)
-  {
-    std::cerr << "non-std exception" << std::endl;
-  }
+  catch(...)  // NOLINT(bugprone-empty-catch): diagnostics must not escape halt().
+  {}
 }
 }  // namespace
 
@@ -40,27 +90,72 @@ FinallyNode::FinallyNode(const std::string& name, const NodeConfig& config)
 
 void FinallyNode::halt()
 {
+  FinallyState& state = finallyState();
+  // A halt() that arrives while another one runs, e.g. Tree::haltTree() from a service thread
+  // while the tick thread is in the halt_timeout_msec loop, returns at once without touching
+  // children or state, so cleanup is never ticked concurrently. The first halt() still halts
+  // both children and resets this node when it is done; until then the caller's haltChild()
+  // already shows this node IDLE. Waiting for the first halt() instead would block a timer or
+  // service thread for up to halt_timeout_msec, and deadlock on a re-entrant halt().
+  bool expected = false;
+  if(!state.halting.compare_exchange_strong(expected, true))
+  {
+    return;
+  }
+  const ClearOnExit clear_halting(&state.halting);
+
   // halt() also runs from ~Tree(), where a propagating exception terminates, so nothing here throws.
-  if(status() == NodeStatus::RUNNING && children_nodes_.size() == 2)
+  try
   {
-    if(!in_cleanup_)
+    const bool foreign =
+        tls_in_foreign_halt || std::this_thread::get_id() != state.tick_thread.load();
+    const ForeignHaltScope scope(foreign);
+    if(status() == NodeStatus::RUNNING && children_nodes_.size() == 2)
     {
-      haltChildNoThrow(0);
+      if(!in_cleanup_)
+      {
+        haltChildNoThrow(0);
+      }
+      finishCleanupDuringHalt();
     }
-    finishCleanupDuringHalt();
+    for(size_t i = 0; i < children_nodes_.size(); i++)
+    {
+      haltChildNoThrow(i);
+    }
   }
-  for(size_t i = 0; i < children_nodes_.size(); i++)
+  catch(...)
   {
-    haltChildNoThrow(i);
+    printException(name(), "halt() threw", std::current_exception());
+    for(size_t i = 0; i < children_nodes_.size(); i++)
+    {
+      haltChildNoThrow(i);
+    }
   }
+  if(main_exception_)
+  {
+    printException(name(),
+                   "halted while cleanup ran after main threw, dropping main's exception",
+                   main_exception_);
+  }
+  state.tick_thread.store(std::thread::id{});
   in_cleanup_ = false;
+  state.main_started = false;
   main_status_ = NodeStatus::IDLE;
   main_exception_ = nullptr;
-  resetStatus();
+  try
+  {
+    // Notifies status observers, such as loggers, which may throw.
+    resetStatus();
+  }
+  catch(...)
+  {
+    printException(name(), "resetStatus() threw during halt", std::current_exception());
+  }
 }
 
 void FinallyNode::finishCleanupDuringHalt()
 {
+  const bool foreign_thread = tls_in_foreign_halt;
   unsigned timeout_msec = kDefaultHaltTimeoutMsec;
   if(auto input = getInput<unsigned>("halt_timeout_msec"))
   {
@@ -75,10 +170,18 @@ void FinallyNode::finishCleanupDuringHalt()
       std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_msec);
   try
   {
-    // Cleanup is commonly asynchronous, so keep ticking it until it finishes rather than
-    // halting it after its first tick.
     NodeStatus cleanup_status = children_nodes_[1]->executeTick();
-    while(cleanup_status == NodeStatus::RUNNING)
+    // Cleanup gets one tick. Keep ticking only if halt_timeout_msec > 0 and this is the thread
+    // that ticks the tree, so a halt from a timer or service thread does not block its caller.
+    if(timeout_msec > 0 && foreign_thread && cleanup_status == NodeStatus::RUNNING)
+    {
+      std::cerr << "[" << name()
+                << "]: halted from a thread that does not tick this node, cleanup gets a "
+                   "single tick instead of halt_timeout_msec"
+                << std::endl;
+    }
+    const bool keep_ticking = timeout_msec > 0 && !foreign_thread;
+    while(keep_ticking && cleanup_status == NodeStatus::RUNNING)
     {
       // Start no tick after the deadline, so a tick that blocks cannot extend the wait.
       const auto next_tick = std::chrono::steady_clock::now() + kHaltTickPeriod;
@@ -123,13 +226,16 @@ NodeStatus FinallyNode::tick()
     throw LogicError("[", name(), "]: Finally requires exactly 2 children");
   }
 
+  FinallyState& state = finallyState();
   if(!isStatusActive(status()))
   {
     in_cleanup_ = false;
+    state.main_started = false;
     main_exception_ = nullptr;
   }
 
   setStatus(NodeStatus::RUNNING);
+  state.tick_thread.store(std::this_thread::get_id());
 
   if(!in_cleanup_)
   {
@@ -146,13 +252,23 @@ NodeStatus FinallyNode::tick()
 
     if(main_status_ == NodeStatus::RUNNING)
     {
+      state.main_started = true;
       return NodeStatus::RUNNING;
     }
     if(main_status_ == NodeStatus::IDLE)
     {
       throw LogicError("[", name(), "]: A child should not return IDLE");
     }
+    if(main_status_ == NodeStatus::SKIPPED && !state.main_started)
+    {
+      // Main did nothing, so there is nothing to clean up. executeTick() keeps our RUNNING
+      // status on SKIPPED, and halt() would run cleanup.
+      resetChildren();
+      resetStatus();
+      return NodeStatus::SKIPPED;
+    }
     in_cleanup_ = true;
+    state.main_started = false;
   }
 
   NodeStatus cleanup_status = NodeStatus::IDLE;
@@ -194,7 +310,8 @@ NodeStatus FinallyNode::tick()
   }
   if(main_status_ == NodeStatus::SKIPPED)
   {
-    // executeTick() keeps our RUNNING status on SKIPPED, and halt() would rerun cleanup.
+    // Main was skipped after it started, e.g. by _while. executeTick() keeps our RUNNING status
+    // on SKIPPED, and halt() would rerun cleanup.
     resetStatus();
   }
   return main_status_;

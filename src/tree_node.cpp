@@ -13,6 +13,8 @@
 
 #include "behaviortree_cpp/tree_node.h"
 
+#include "finally_node_state.h"
+
 #include <array>
 #include <atomic>
 #include <cstring>
@@ -51,6 +53,8 @@ struct TreeNode::PImpl
 
   std::array<ScriptFunction, size_t(PreCond::COUNT_)> pre_parsed;
   std::array<ScriptFunction, size_t(PostCond::COUNT_)> post_parsed;
+
+  FinallyState finally_state;
 };
 
 TreeNode::TreeNode(std::string name, NodeConfig config)
@@ -67,6 +71,11 @@ TreeNode& TreeNode::operator=(TreeNode&& other) noexcept
 }
 
 TreeNode::~TreeNode() = default;
+
+TreeNode::FinallyState& TreeNode::finallyState() noexcept
+{
+  return _p->finally_state;
+}
 
 NodeStatus TreeNode::executeTick()
 {
